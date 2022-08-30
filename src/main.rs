@@ -76,6 +76,18 @@ fn handle_cmd_arguments(directories: &Vec<DirEntry>) -> (Vec<&DirEntry>, Vec<&Di
                 "-D" => push_mode = PushMode::Unstow,
                 "-R" => push_mode = PushMode::Restow,
                 "-A" => push_mode = PushMode::Adopt,
+                "-h" | "--help" => {
+                    print_help();
+                    process::exit(0);
+                }
+                "-d" | "--stow-dir" => {
+                    println!("--stow-dir is not implemented yet.");
+                    process::exit(1);
+                }
+                "-t" | "--target-dir" => {
+                    println!("--target-dir is not implemented yet.");
+                    process::exit(1);
+                }
                 _ => {
                     println!("Unknown argument: {argument}.");
                     println!("Use `rustow -h` for available arguments.");
@@ -171,6 +183,32 @@ fn stow_all_inside_dir(original: PathBuf, destination: PathBuf) {
             write_location.push(element.file_name());
             stow(element.path(), write_location);
         });
+}
+
+fn print_help() {
+    let help_str = concat!(
+        "rustow version 0.1", "\n",
+        "\n",
+        "Usage:", "\n",
+        "    rustow [OPTION ...] [-S|-D|-R|-A] PACKAGE ... [-S|-D|-R|-A] PACKAGE ...", "\n",
+        "\n",
+        "Actions:", "\n",
+        "    -S  Stow the package.", "\n",
+        "        Creates symlinks of files in the package to target directory", "\n",
+        "    -D  Unstow the package.", "\n",
+        "        Removes existing symlinks of files in the package in target directory", "\n",
+        "    -R  Restow the package.", "\n",
+        "        Same as unstowing and stowing a package", "\n",
+        "    -A  Adopt the package.", "\n",
+        "        Imports existing files in target directory to stow package. USE WITH CAUTION!", "\n",
+        "\n",
+        "Options:", "\n",
+        "    -h      --help            Prints this help message", "\n",
+        "    -d DIR  --stow-dir DIR    Set stow dir to DIR (default is current dir)", "\n",
+        "    -t DIR  --target-dir DIR  Set target dir to DIR (default is parent of stow dir)", "\n",
+        );
+
+    println!("{help_str}");
 }
 
 enum PushMode {

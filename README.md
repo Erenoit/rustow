@@ -20,10 +20,11 @@ $ cargo build --release
 - [x] Basic functionality
 - [x] Better stow algorithm (i.e. if file already exist program fails)
 - [x] Take arguments for choosing what to stow
-- [ ] Help text
+- [x] Help text
 - [ ] Unstow
 - [ ] Restow
 - [ ] Adopt (check GNU Stow help)
+- [ ] --stow-dir and --terget-dir options
 - [ ] Special keywords to change stow target (i.e. `@root`, `@home`)
 - [ ] Windows support *maybe*
 
