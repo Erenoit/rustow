@@ -1,4 +1,4 @@
-use std::{env, fs::{self, DirEntry}, io, path::PathBuf, process, os::unix};
+use std::{env, fs::{self, DirEntry}, io::{self, Write}, path::PathBuf, process, os::unix};
 
 fn main() {
     let working_dir = env::current_dir().expect("Working directory couldn't found.");
@@ -97,7 +97,8 @@ fn handle_cmd_arguments(directories: &Vec<DirEntry>) -> (Vec<&DirEntry>, Vec<&Di
             }
             if !is_valid {
                 println!("Invalid argument: {argument}.");
-                println!("Do you want to continue for other files (Y/n): ");
+                print!("Do you want to continue without this argument (Y/n): ");
+                io::stdout().flush().expect("Failed to print.");
                 let mut buffer = String::new();
                 let stdin = io::stdin();
                 _ = stdin.read_line(&mut buffer);
@@ -130,7 +131,8 @@ fn stow(original: PathBuf, destination: PathBuf) {
         if destination.is_dir() {
             stow_all_inside_dir(original, destination);
         } else {
-            println!("{} already exists, would you like to delete it and replace with symlink (y/N): ", fname);
+            print!("{} already exists, would you like to delete it and replace with symlink (y/N): ", fname);
+            io::stdout().flush().expect("Failed to print.");
             let mut buffer = String::new();
             let stdin = io::stdin();
             _ = stdin.read_line(&mut buffer);
