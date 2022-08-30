@@ -22,7 +22,7 @@ $ cargo build --release
 - [x] Take arguments for choosing what to stow
 - [x] Help text
 - [x] Unstow
-- [ ] Restow
+- [x] Restow
 - [ ] Adopt (check GNU Stow help)
 - [ ] --stow-dir and --terget-dir options
 - [ ] Special keywords to change stow target (i.e. `@root`, `@home`)

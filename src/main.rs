@@ -34,7 +34,10 @@ fn main() {
     }
 
     if restow_l.len() > 0 {
-        println!("Restow functionality is not implemented yet. Skipping...");
+        for directory in restow_l {
+            unstow_all_inside_dir(directory.path(), write_dir_main.clone());
+            stow_all_inside_dir(directory.path(), write_dir_main.clone());
+        }
     }
 
     if stow_l.len() > 0 {
