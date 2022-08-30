@@ -21,7 +21,7 @@ $ cargo build --release
 - [x] Better stow algorithm (i.e. if file already exist program fails)
 - [x] Take arguments for choosing what to stow
 - [x] Help text
-- [ ] Unstow
+- [x] Unstow
 - [ ] Restow
 - [ ] Adopt (check GNU Stow help)
 - [ ] --stow-dir and --terget-dir options

@@ -28,7 +28,9 @@ fn main() {
     let (stow_l, unstow_l, restow_l, adopt_l) = handle_cmd_arguments(&directories);
 
     if unstow_l.len() > 0 {
-        println!("Unstow functionality is not implemented yet. Skipping...");
+        for directory in unstow_l {
+            unstow_all_inside_dir(directory.path(), write_dir_main.clone());
+        }
     }
 
     if restow_l.len() > 0 {
@@ -182,6 +184,58 @@ fn stow_all_inside_dir(original: PathBuf, destination: PathBuf) {
             let mut write_location = destination.clone();
             write_location.push(element.file_name());
             stow(element.path(), write_location);
+        });
+}
+
+/*
+ * if there is symlink, removes it
+ * if there is a folder try to unstow things inside the folder
+ * if thete is a file, prompts error and skips
+ */
+fn unstow(original: PathBuf, target: PathBuf) {
+    let fname = target
+        .file_name()
+        .expect("There should always be a file name.")
+        .to_string_lossy();
+
+    if !target.exists() {
+        println!("{fname} does not exists. Nothing to unstow.");
+        return;
+    }
+
+    if target.is_symlink() {
+        _ = fs::remove_file(target);
+    } else {
+        if target.is_dir() && original.is_dir() {
+            unstow_all_inside_dir(original, target);
+        } else {
+            println!("{fname} exists but it is not a symlink. Skipping...");
+        }
+    }
+}
+
+/*
+ * iterates over everything inside a directory and unstows it
+ */
+fn unstow_all_inside_dir(original: PathBuf, target: PathBuf) {
+    let fname = target
+        .file_name()
+        .expect("There should always be a file name.")
+        .to_string_lossy();
+
+    let subdirs = fs::read_dir(original);
+    if subdirs.is_err() { 
+        println!("{} couldn't be read. Skipping...", fname);
+        return;
+    }
+
+    subdirs.unwrap()
+        .filter(|e| { e.is_ok() })
+        .map(|e| { e.unwrap() })
+        .for_each(|element| {
+            let mut write_location = target.clone();
+            write_location.push(element.file_name());
+            unstow(element.path(), write_location);
         });
 }
 
