@@ -1,4 +1,4 @@
-use std::{env, fs, io, path::PathBuf, os::unix};
+use std::{env, fs::{self, DirEntry}, io, path::PathBuf, process, os::unix};
 
 fn main() {
     let working_dir = env::current_dir().expect("Working directory couldn't found.");
@@ -18,13 +18,99 @@ fn main() {
             if fname.is_err() { return false; }
 
             !fname.unwrap().starts_with(".")
-        });
+        })
+        .collect::<Vec<_>>();
 
     let mut write_dir_main = working_dir.clone();
     write_dir_main.pop();
-    for file in directories {
-        stow_all_inside_dir(file.path(), write_dir_main.clone());
+
+
+    let (stow_l, unstow_l, restow_l, adopt_l) = handle_cmd_arguments(&directories);
+
+    if unstow_l.len() > 0 {
+        println!("Unstow functionality is not implemented yet. Skipping...");
     }
+
+    if restow_l.len() > 0 {
+        println!("Restow functionality is not implemented yet. Skipping...");
+    }
+
+    if stow_l.len() > 0 {
+        for directory in stow_l {
+            stow_all_inside_dir(directory.path(), write_dir_main.clone());
+        }
+    }
+
+    if adopt_l.len() > 0 {
+        println!("Adopt functionality is not implemented yet. Skipping...");
+    }
+}
+
+/*
+ * Takes command line arguments and creates Vec for each possible action (stow, unstow, restow,
+ * adopt).
+ * if there is an invalid flag, prompts error and exits
+ * if there is an invalid argument (one doesn't match with a directory name) prompts error
+ * and asks if user wants to comtinue without that argument
+ */
+fn handle_cmd_arguments(directories: &Vec<DirEntry>) -> (Vec<&DirEntry>, Vec<&DirEntry>, Vec<&DirEntry>, Vec<&DirEntry>) {
+    let mut stow   = Vec::<&DirEntry>::new();
+    let mut unstow = Vec::<&DirEntry>::new();
+    let mut restow = Vec::<&DirEntry>::new();
+    let mut adopt  = Vec::<&DirEntry>::new();
+
+    let mut push_mode = PushMode::Stow;
+
+    let mut args = env::args();
+    args.next();             // First argument is executable name
+
+    'args_loop: loop {
+        let argument = match args.next() {
+            Some(a) => a,
+            None => break 'args_loop
+        };
+
+        if argument.starts_with("-") {
+            match &argument[..] {
+                "-S" => push_mode = PushMode::Stow,
+                "-D" => push_mode = PushMode::Unstow,
+                "-R" => push_mode = PushMode::Restow,
+                "-A" => push_mode = PushMode::Adopt,
+                _ => {
+                    println!("Unknown argument: {argument}.");
+                    println!("Use `rustow -h` for available arguments.");
+                    process::exit(1);
+                }
+            }
+        } else {
+            let mut is_valid = false;
+            for e in directories {
+                if e.file_name().to_string_lossy() == argument {
+                    is_valid = true;
+                    match push_mode {
+                        PushMode::Stow   => stow.push(e),
+                        PushMode::Unstow => unstow.push(e),
+                        PushMode::Restow => restow.push(e),
+                        PushMode::Adopt  => adopt.push(e),
+                    }
+                }
+            }
+            if !is_valid {
+                println!("Invalid argument: {argument}.");
+                println!("Do you want to continue for other files (Y/n): ");
+                let mut buffer = String::new();
+                let stdin = io::stdin();
+                _ = stdin.read_line(&mut buffer);
+                let res = buffer.trim().to_lowercase();
+
+                if res != "y" && res != "yes" && res != "" {
+                    process::exit(1);
+                }
+            }
+        }
+    }
+
+    return (stow, unstow, restow, adopt)  ;
 }
 
 /*
@@ -83,5 +169,12 @@ fn stow_all_inside_dir(original: PathBuf, destination: PathBuf) {
             write_location.push(element.file_name());
             stow(element.path(), write_location);
         });
+}
+
+enum PushMode {
+    Stow,
+    Unstow,
+    Restow,
+    Adopt,
 }
 

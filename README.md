@@ -19,11 +19,12 @@ $ cargo build --release
 ## TODO
 - [x] Basic functionality
 - [x] Better stow algorithm (i.e. if file already exist program fails)
-- [ ] Take arguments for choosing what to stow
+- [x] Take arguments for choosing what to stow
 - [ ] Help text
 - [ ] Unstow
-- [ ] Adopt functionality (check GNU Stow help to understand)
-- [ ] Windows support *maybe*
+- [ ] Restow
+- [ ] Adopt (check GNU Stow help)
 - [ ] Special keywords to change stow target (i.e. `@root`, `@home`)
+- [ ] Windows support *maybe*
 
 *more things will be added as they come to my mind or suggested.*
