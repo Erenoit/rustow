@@ -1,3 +1,6 @@
+#[cfg(test)]
+mod test;
+
 use std::{env, fs::{self, DirEntry}, io::{self, Write}, path::PathBuf, process, os::unix};
 
 fn main() {
