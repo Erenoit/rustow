@@ -4,48 +4,28 @@ mod test;
 use std::{env, fs::{self, DirEntry}, io::{self, Write}, path::PathBuf, process, os::unix};
 
 fn main() {
-    let working_dir = env::current_dir().expect("Working directory couldn't found.");
+    let mut stow_dir = env::current_dir().expect("Working directory couldn't found.");
+    let mut target_dir = stow_dir.clone();
+    target_dir.pop();
 
-    let directories = fs::read_dir(&working_dir)
-        .expect("Couldn't read working directory.")
-        .filter(|e| { e.is_ok() })        // Remove errors
-        .map(|e| { e.unwrap() })
-        .filter(|e| {                     // Only take directories
-            let ftype = e.file_type();
-            if ftype.is_err() { return false; }
-
-            ftype.unwrap().is_dir()
-        })
-        .filter(|e| {                     // Remove files starts with dot
-            let fname = e.file_name().into_string();
-            if fname.is_err() { return false; }
-
-            !fname.unwrap().starts_with(".")
-        })
-        .collect::<Vec<_>>();
-
-    let mut write_dir_main = working_dir.clone();
-    write_dir_main.pop();
-
-
-    let (stow_l, unstow_l, restow_l, adopt_l) = handle_cmd_arguments(&directories);
+    let (stow_l, unstow_l, restow_l, adopt_l) = handle_cmd_arguments(&mut stow_dir, &mut target_dir);
 
     if unstow_l.len() > 0 {
         for directory in unstow_l {
-            unstow_all_inside_dir(directory.path(), write_dir_main.clone());
+            unstow_all_inside_dir(directory, target_dir.clone());
         }
     }
 
     if restow_l.len() > 0 {
         for directory in restow_l {
-            unstow_all_inside_dir(directory.path(), write_dir_main.clone());
-            stow_all_inside_dir(directory.path(), write_dir_main.clone());
+            unstow_all_inside_dir(directory.clone(), target_dir.clone());
+            stow_all_inside_dir(directory.clone(), target_dir.clone());
         }
     }
 
     if stow_l.len() > 0 {
         for directory in stow_l {
-            stow_all_inside_dir(directory.path(), write_dir_main.clone());
+            stow_all_inside_dir(directory, target_dir.clone());
         }
     }
 
@@ -61,11 +41,11 @@ fn main() {
  * if there is an invalid argument (one doesn't match with a directory name) prompts error
  * and asks if user wants to comtinue without that argument
  */
-fn handle_cmd_arguments(directories: &Vec<DirEntry>) -> (Vec<&DirEntry>, Vec<&DirEntry>, Vec<&DirEntry>, Vec<&DirEntry>) {
-    let mut stow   = Vec::<&DirEntry>::new();
-    let mut unstow = Vec::<&DirEntry>::new();
-    let mut restow = Vec::<&DirEntry>::new();
-    let mut adopt  = Vec::<&DirEntry>::new();
+fn handle_cmd_arguments(stow_dir: &mut PathBuf, target_dir: &mut PathBuf) -> (Vec<PathBuf>, Vec<PathBuf>, Vec<PathBuf>, Vec<PathBuf>) {
+    let mut str_stow   = Vec::<String>::with_capacity(10);
+    let mut str_unstow = Vec::<String>::with_capacity(10);
+    let mut str_restow = Vec::<String>::with_capacity(10);
+    let mut str_adopt  = Vec::<String>::with_capacity(10);
 
     let mut push_mode = PushMode::Stow;
 
@@ -89,12 +69,36 @@ fn handle_cmd_arguments(directories: &Vec<DirEntry>) -> (Vec<&DirEntry>, Vec<&Di
                     process::exit(0);
                 }
                 "-d" | "--stow-dir" => {
-                    println!("--stow-dir is not implemented yet.");
-                    process::exit(1);
+                    let new_dir = match args.next() {
+                        Some(a) => PathBuf::from(a),
+                        None => {
+                            println!("--stow-dir option requires an argument\n");
+                            process::exit(1);
+                        }
+                    };
+
+                    if !new_dir.exists() || !new_dir.is_dir() {
+                        println!("{} is not a valid directory in your file system.", new_dir.to_string_lossy());
+                        process::exit(1);
+                    }
+
+                    *stow_dir = new_dir;
                 }
                 "-t" | "--target-dir" => {
-                    println!("--target-dir is not implemented yet.");
-                    process::exit(1);
+                    let new_dir = match args.next() {
+                        Some(a) => PathBuf::from(a),
+                        None => {
+                            println!("--target-dir option requires an argument\n");
+                            process::exit(1);
+                        }
+                    };
+
+                    if !new_dir.exists() || !new_dir.is_dir() {
+                        println!("{} is not a valid directory in your file system.", new_dir.to_string_lossy());
+                        process::exit(1);
+                    }
+
+                    *target_dir = new_dir;
                 }
                 _ => {
                     println!("Unknown argument: {argument}.");
@@ -103,20 +107,64 @@ fn handle_cmd_arguments(directories: &Vec<DirEntry>) -> (Vec<&DirEntry>, Vec<&Di
                 }
             }
         } else {
-            let mut is_valid = false;
-            for e in directories {
-                if e.file_name().to_string_lossy() == argument {
-                    is_valid = true;
-                    match push_mode {
-                        PushMode::Stow   => stow.push(e),
-                        PushMode::Unstow => unstow.push(e),
-                        PushMode::Restow => restow.push(e),
-                        PushMode::Adopt  => adopt.push(e),
-                    }
-                }
+            match push_mode {
+                PushMode::Stow   => str_stow.push(argument),
+                PushMode::Unstow => str_unstow.push(argument),
+                PushMode::Restow => str_restow.push(argument),
+                PushMode::Adopt  => str_adopt.push(argument),
             }
+        }
+    }
+
+    let mut stow_l   = Vec::<PathBuf>::with_capacity(str_stow.len());
+    let mut unstow_l = Vec::<PathBuf>::with_capacity(str_unstow.len());
+    let mut restow_l = Vec::<PathBuf>::with_capacity(str_restow.len());
+    let mut adopt_l  = Vec::<PathBuf>::with_capacity(str_adopt.len());
+
+    let directories = fs::read_dir(&stow_dir)
+        .expect("Couldn't read working directory.")
+        .filter(|e| { e.is_ok() })        // Remove errors
+        .map(|e| { e.unwrap() })
+        .filter(|e| {                     // Only take directories
+            let ftype = e.file_type();
+            if ftype.is_err() { return false; }
+
+            ftype.unwrap().is_dir()
+        })
+        .filter(|e| {                     // Remove files starts with dot
+            let fname = e.file_name().into_string();
+            if fname.is_err() { return false; }
+
+            !fname.unwrap().starts_with(".")
+        })
+        .collect::<Vec<_>>();
+
+        validate_directories(&str_stow,   &mut stow_l,   &directories);
+        validate_directories(&str_unstow, &mut unstow_l, &directories);
+        validate_directories(&str_restow, &mut restow_l, &directories);
+        validate_directories(&str_adopt,  &mut adopt_l,  &directories);
+
+    return (stow_l, unstow_l, restow_l, adopt_l)  ;
+}
+
+/*
+ * Takes valid directories as one of its parameters
+ * Checks every string in str_vec with names of every element in valid_directories
+ * If mathes, adds whole path to target_vec
+ * If do not math at all, asks user if they want to continue without that argument
+ * If user says no, terminates the program
+ */
+fn validate_directories(str_vec: &Vec<String>, target_vec: &mut Vec<PathBuf>, valid_directories: &Vec<DirEntry>) {
+    for arg in str_vec {
+        let mut is_valid = false;
+        for e in valid_directories {
+            if e.file_name().to_string_lossy() == arg[..] {
+                is_valid = true;
+                target_vec.push(e.path());
+            }
+
             if !is_valid {
-                println!("Invalid argument: {argument}.");
+                println!("Invalid argument: {arg}.");
                 print!("Do you want to continue without this argument (Y/n): ");
                 io::stdout().flush().expect("Failed to print.");
                 let mut buffer = String::new();
@@ -130,8 +178,6 @@ fn handle_cmd_arguments(directories: &Vec<DirEntry>) -> (Vec<&DirEntry>, Vec<&Di
             }
         }
     }
-
-    return (stow, unstow, restow, adopt)  ;
 }
 
 /*

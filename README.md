@@ -24,7 +24,7 @@ $ cargo build --release
 - [x] Unstow
 - [x] Restow
 - [ ] Adopt (check GNU Stow help)
-- [ ] --stow-dir and --terget-dir options
+- [x] --stow-dir and --target-dir options
 - [ ] Special keywords to change stow target (i.e. `@root`, `@home`)
 - [x] Add tests
 - [ ] Windows support *maybe*
