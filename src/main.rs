@@ -12,20 +12,20 @@ fn main() {
 
     if unstow_l.len() > 0 {
         for directory in unstow_l {
-            unstow_all_inside_dir(directory, target_dir.clone());
+            unstow_all_inside_dir(&directory, &target_dir);
         }
     }
 
     if restow_l.len() > 0 {
         for directory in restow_l {
-            unstow_all_inside_dir(directory.clone(), target_dir.clone());
-            stow_all_inside_dir(directory.clone(), target_dir.clone());
+            unstow_all_inside_dir(&directory, &target_dir);
+            stow_all_inside_dir(&directory, &target_dir);
         }
     }
 
     if stow_l.len() > 0 {
         for directory in stow_l {
-            stow_all_inside_dir(directory, target_dir.clone());
+            stow_all_inside_dir(&directory, &target_dir);
         }
     }
 
@@ -185,7 +185,7 @@ fn validate_directories(str_vec: &Vec<String>, target_vec: &mut Vec<PathBuf>, va
  * if there is already a file ask if user wants to remove existing one and stow or cancel
  * otherwise creates symlink
  */
-fn stow(original: PathBuf, destination: PathBuf) {
+fn stow(original: &PathBuf, destination: &PathBuf) {
     let fname = destination
         .file_name()
         .expect("There should always be a file name.")
@@ -217,7 +217,7 @@ fn stow(original: PathBuf, destination: PathBuf) {
 /*
  * iterates over everything inside a directory and stows it
  */
-fn stow_all_inside_dir(original: PathBuf, destination: PathBuf) {
+fn stow_all_inside_dir(original: &PathBuf, destination: &PathBuf) {
     let fname = destination
         .file_name()
         .expect("There should always be a file name.")
@@ -229,13 +229,14 @@ fn stow_all_inside_dir(original: PathBuf, destination: PathBuf) {
         return;
     }
 
+    let mut write_location = destination.clone();
     subdirs.unwrap()
         .filter(|e| { e.is_ok() })
         .map(|e| { e.unwrap() })
         .for_each(|element| {
-            let mut write_location = destination.clone();
             write_location.push(element.file_name());
-            stow(element.path(), write_location);
+            stow(&element.path(), &write_location);
+            write_location.pop();
         });
 }
 
@@ -244,7 +245,7 @@ fn stow_all_inside_dir(original: PathBuf, destination: PathBuf) {
  * if there is a folder try to unstow things inside the folder
  * if thete is a file, prompts error and skips
  */
-fn unstow(original: PathBuf, target: PathBuf) {
+fn unstow(original: &PathBuf, target: &PathBuf) {
     let fname = target
         .file_name()
         .expect("There should always be a file name.")
@@ -269,7 +270,7 @@ fn unstow(original: PathBuf, target: PathBuf) {
 /*
  * iterates over everything inside a directory and unstows it
  */
-fn unstow_all_inside_dir(original: PathBuf, target: PathBuf) {
+fn unstow_all_inside_dir(original: &PathBuf, target: &PathBuf) {
     let fname = target
         .file_name()
         .expect("There should always be a file name.")
@@ -281,13 +282,14 @@ fn unstow_all_inside_dir(original: PathBuf, target: PathBuf) {
         return;
     }
 
+    let mut write_location = target.clone();
     subdirs.unwrap()
         .filter(|e| { e.is_ok() })
         .map(|e| { e.unwrap() })
         .for_each(|element| {
-            let mut write_location = target.clone();
             write_location.push(element.file_name());
-            unstow(element.path(), write_location);
+            unstow(&element.path(), &write_location);
+            write_location.pop();
         });
 }
 
