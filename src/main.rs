@@ -192,7 +192,30 @@ fn stow(original: &PathBuf, destination: &PathBuf) {
         .to_string_lossy();
 
     if destination.is_symlink() {
-        println!("{} is already stowed. Skipping...", fname);
+        if destination.is_dir() {
+            let real_dest = fs::canonicalize(destination);
+            if real_dest.is_ok(){
+                _ = fs::remove_file(destination);
+                _ = fs::create_dir(destination);
+
+                stow_all_inside_dir(&real_dest.unwrap(), destination);
+                stow_all_inside_dir(original, destination);
+            } else {
+                print!("There is an invalid symlink on {}. Would you like to delete it and replace with new symlink (y/N): ", fname);
+                io::stdout().flush().expect("Failed to print.");
+                let mut buffer = String::new();
+                let stdin = io::stdin();
+                _ = stdin.read_line(&mut buffer);
+                let res = buffer.trim().to_lowercase();
+
+                if res == "y" || res == "yes" {
+                    _ = fs::remove_file(&destination);
+                    _ = unix::fs::symlink(original, destination);
+                }
+            }
+        } else {
+            println!("{} is already stowed. Skipping...", fname);
+        }
     } else if destination.exists() {
         if destination.is_dir() {
             stow_all_inside_dir(original, destination);
