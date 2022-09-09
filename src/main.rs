@@ -162,19 +162,19 @@ fn validate_directories(str_vec: &Vec<String>, target_vec: &mut Vec<PathBuf>, va
                 is_valid = true;
                 target_vec.push(e.path());
             }
+        }
 
-            if !is_valid {
-                println!("Invalid argument: {arg}.");
-                print!("Do you want to continue without this argument (Y/n): ");
-                io::stdout().flush().expect("Failed to print.");
-                let mut buffer = String::new();
-                let stdin = io::stdin();
-                _ = stdin.read_line(&mut buffer);
-                let res = buffer.trim().to_lowercase();
+        if !is_valid {
+            println!("Invalid argument: {arg}.");
+            print!("Do you want to continue without this argument (Y/n): ");
+            io::stdout().flush().expect("Failed to print.");
+            let mut buffer = String::new();
+            let stdin = io::stdin();
+            _ = stdin.read_line(&mut buffer);
+            let res = buffer.trim().to_lowercase();
 
-                if res != "y" && res != "yes" && res != "" {
-                    process::exit(1);
-                }
+            if res != "y" && res != "yes" && res != "" {
+                process::exit(1);
             }
         }
     }
