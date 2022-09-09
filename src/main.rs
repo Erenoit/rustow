@@ -314,6 +314,12 @@ fn unstow_all_inside_dir(original: &PathBuf, target: &PathBuf) {
             unstow(&element.path(), &write_location);
             write_location.pop();
         });
+
+    if let Ok(mut dir_iterator) = fs::read_dir(target) {
+        if dir_iterator.next().is_none() {
+            _ = fs::remove_dir(target);
+        }
+    }
 }
 
 fn print_help() {
