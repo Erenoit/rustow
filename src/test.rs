@@ -278,7 +278,7 @@ fn full_stow() {
     directories_after.sort_by(|a, b| { a.file_name().cmp(&b.file_name()) });
 
     assert_eq!(directories_after.len(), 4) ;
-    assert!( directories_after[0].path().is_symlink());
+    assert!(!directories_after[0].path().is_symlink());
     assert!(!directories_after[1].path().is_symlink());
     assert!( directories_after[2].path().is_symlink());
     assert!(!directories_after[3].path().is_symlink());
@@ -472,18 +472,8 @@ fn basic_unstow_w_parent_directory_exits() {
         .collect::<Vec<_>>();
     directories_after.sort_by(|a, b| { a.file_name().cmp(&b.file_name()) });
 
-    assert_eq!(directories_after.len(), 2) ;
+    assert_eq!(directories_after.len(), 1) ;
     assert!(!directories_after[0].path().is_symlink());
-    assert!(!directories_after[1].path().is_symlink());
-
-    working_dir.push("existing_directory");
-    let inside_existing_dir = fs::read_dir(&working_dir)
-        .expect("Couldn't read working directory.")
-        .filter(|e| { e.is_ok() })        // Remove errors
-        .map(|e| { e.unwrap() })
-        .collect::<Vec<_>>();
-
-    assert_eq!(inside_existing_dir.len(), 0) ;
 
 
     clean_test(TEST_NO);
@@ -532,7 +522,7 @@ fn full_unstow() {
     directories_after.sort_by(|a, b| { a.file_name().cmp(&b.file_name()) });
 
     assert_eq!(directories_after.len(), 4) ;
-    assert!( directories_after[0].path().is_symlink());
+    assert!(!directories_after[0].path().is_symlink());
     assert!(!directories_after[1].path().is_symlink());
     assert!( directories_after[2].path().is_symlink());
     assert!(!directories_after[3].path().is_symlink());
@@ -583,9 +573,8 @@ fn full_unstow() {
         .collect::<Vec<_>>();
     directories_after.sort_by(|a, b| { a.file_name().cmp(&b.file_name()) });
 
-    assert_eq!(directories_after.len(), 2) ;
+    assert_eq!(directories_after.len(), 1) ;
     assert!(!directories_after[0].path().is_symlink());
-    assert!(!directories_after[1].path().is_symlink());
 
 
     clean_test(TEST_NO);
