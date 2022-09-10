@@ -123,7 +123,7 @@ fn basic_stow_file() {
 
     working_dir.push("file_in_target_root");
 
-    stow(&file_path, &working_dir);
+    stow(&file_path, &working_dir, false);
 
     working_dir.pop();
 
@@ -163,7 +163,7 @@ fn basic_stow_folder() {
 
     working_dir.push("another_directory");
 
-    stow(&file_path, &working_dir);
+    stow(&file_path, &working_dir, false);
 
     working_dir.pop();
 
@@ -203,7 +203,7 @@ fn basic_stow_w_parent_directory_exits() {
 
     working_dir.push("existing_directory");
 
-    stow(&file_path, &working_dir);
+    stow(&file_path, &working_dir, false);
 
     working_dir.pop();
 
@@ -263,7 +263,7 @@ fn full_stow() {
 
     working_dir.pop();
     for dir in directories {
-        stow_all_inside_dir(&dir.path(), &working_dir);
+        stow_all_inside_dir(&dir.path(), &working_dir, true);
     }
 
 
@@ -313,7 +313,7 @@ fn basic_unstow_file() {
 
     working_dir.push("file_in_target_root");
 
-    stow(&file_path, &working_dir);
+    stow(&file_path, &working_dir, false);
 
     working_dir.pop();
 
@@ -332,7 +332,7 @@ fn basic_unstow_file() {
 
     working_dir.push("file_in_target_root");
 
-    unstow(&file_path, &working_dir);
+    unstow(&file_path, &working_dir, true);
 
     working_dir.pop();
 
@@ -370,7 +370,7 @@ fn basic_unstow_folder() {
 
     working_dir.push("another_directory");
 
-    stow(&file_path, &working_dir);
+    stow(&file_path, &working_dir, false);
 
     working_dir.pop();
 
@@ -389,7 +389,7 @@ fn basic_unstow_folder() {
 
     working_dir.push("another_directory");
 
-    unstow(&file_path, &working_dir);
+    unstow(&file_path, &working_dir, true);
 
     working_dir.pop();
 
@@ -427,7 +427,7 @@ fn basic_unstow_w_parent_directory_exits() {
 
     working_dir.push("existing_directory");
 
-    stow(&file_path, &working_dir);
+    stow(&file_path, &working_dir, false);
 
     working_dir.pop();
 
@@ -457,7 +457,7 @@ fn basic_unstow_w_parent_directory_exits() {
 
     working_dir.push("existing_directory");
 
-    unstow(&file_path, &working_dir);
+    unstow(&file_path, &working_dir, true);
 
     working_dir.pop();
 
@@ -505,7 +505,7 @@ fn full_unstow() {
 
     working_dir.pop();
     for dir in directories {
-        stow_all_inside_dir(&dir.path(), &working_dir);
+        stow_all_inside_dir(&dir.path(), &working_dir, true);
     }
 
     let mut directories_after = fs::read_dir(&working_dir)
@@ -553,7 +553,7 @@ fn full_unstow() {
 
     working_dir.pop();
     for dir in directories {
-        unstow_all_inside_dir(&dir.path(), &working_dir);
+        unstow_all_inside_dir(&dir.path(), &working_dir, true);
     }
 
 

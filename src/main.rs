@@ -12,20 +12,20 @@ fn main() {
 
     if unstow_l.len() > 0 {
         for directory in unstow_l {
-            unstow_all_inside_dir(&directory, &target_dir);
+            unstow_all_inside_dir(&directory, &target_dir, true);
         }
     }
 
     if restow_l.len() > 0 {
         for directory in restow_l {
-            unstow_all_inside_dir(&directory, &target_dir);
-            stow_all_inside_dir(&directory, &target_dir);
+            unstow_all_inside_dir(&directory, &target_dir, true);
+            stow_all_inside_dir(&directory, &target_dir, true);
         }
     }
 
     if stow_l.len() > 0 {
         for directory in stow_l {
-            stow_all_inside_dir(&directory, &target_dir);
+            stow_all_inside_dir(&directory, &target_dir, true);
         }
     }
 
@@ -180,53 +180,56 @@ fn validate_directories(str_vec: &Vec<String>, target_vec: &mut Vec<PathBuf>, va
  * if there is already a file, asks the user if user wants to remove existing one and stow or cancel
  * otherwise creates symlink
  */
-fn stow(original: &PathBuf, destination: &PathBuf) {
-    let fname = get_name(destination);
+fn stow(original: &PathBuf, destination: &PathBuf, use_special_paths: bool) {
+    let new_dest = if use_special_paths { handle_special_path(destination) }
+                   else { destination.clone() };
 
-    if destination.is_symlink() {
-        if destination.is_dir() {
-            let real_dest = fs::canonicalize(destination);
+    let fname = get_name(&new_dest);
+
+    if new_dest.is_symlink() {
+        if new_dest.is_dir() {
+            let real_dest = fs::canonicalize(&new_dest);
             if real_dest.is_ok(){
-                _ = fs::remove_file(destination);
-                _ = fs::create_dir(destination);
+                _ = fs::remove_file(&new_dest);
+                _ = fs::create_dir(&new_dest);
 
-                stow_all_inside_dir(&real_dest.unwrap(), destination);
-                stow_all_inside_dir(original, destination);
+                stow_all_inside_dir(&real_dest.unwrap(), &new_dest, false);
+                stow_all_inside_dir(original, &new_dest, false);
             } else {
                 let is_accepted = prompt(
                     format!("There is an invalid symlink on {fname}. Would you like to delete it and replace with new symlink"),
                     false);
 
                 if is_accepted {
-                    _ = fs::remove_file(&destination);
-                    _ = unix::fs::symlink(original, destination);
+                    _ = fs::remove_file(&new_dest);
+                    _ = unix::fs::symlink(original, &new_dest);
                 }
             }
         } else {
             println!("{fname} is already stowed. Skipping...");
         }
-    } else if destination.exists() {
-        if destination.is_dir() {
-            stow_all_inside_dir(original, destination);
+    } else if new_dest.exists() {
+        if new_dest.is_dir() {
+            stow_all_inside_dir(original, &new_dest, false);
         } else {
             let is_accepted = prompt(
                 format!("{fname} already exists, would you like to delete it and replace with symlink"),
                 false);
 
             if is_accepted {
-                _ = fs::remove_file(&destination);
-                _ = unix::fs::symlink(original, destination);
+                _ = fs::remove_file(&new_dest);
+                _ = unix::fs::symlink(original, &new_dest);
             }
         }
     } else {
-        _ = unix::fs::symlink(original, destination);
+        _ = unix::fs::symlink(original, &new_dest);
     }
 }
 
 /*
  * iterates over everything inside a directory and stows it
  */
-fn stow_all_inside_dir(original: &PathBuf, destination: &PathBuf) {
+fn stow_all_inside_dir(original: &PathBuf, destination: &PathBuf, use_special_paths: bool) {
     let fname = get_name(destination);
 
     let subdirs = fs::read_dir(original);
@@ -241,7 +244,7 @@ fn stow_all_inside_dir(original: &PathBuf, destination: &PathBuf) {
         .map(|e| { e.unwrap() })
         .for_each(|element| {
             write_location.push(element.file_name());
-            stow(&element.path(), &write_location);
+            stow(&element.path(), &write_location, use_special_paths);
             write_location.pop();
         });
 }
@@ -251,19 +254,22 @@ fn stow_all_inside_dir(original: &PathBuf, destination: &PathBuf) {
  * if there is a directory, try to unstow things inside the folder
  * if thete is a file, prompts error and skips
  */
-fn unstow(original: &PathBuf, target: &PathBuf) {
-    let fname = get_name(target);
+fn unstow(original: &PathBuf, target: &PathBuf, use_special_paths: bool) {
+    let new_target = if use_special_paths { handle_special_path(target) }
+                   else { target.clone() };
 
-    if !target.exists() {
+    let fname = get_name(&new_target);
+
+    if !new_target.exists() {
         println!("{fname} does not exists. Nothing to unstow.");
         return;
     }
 
-    if target.is_symlink() {
-        _ = fs::remove_file(target);
+    if new_target.is_symlink() {
+        _ = fs::remove_file(&new_target);
     } else {
-        if target.is_dir() && original.is_dir() {
-            unstow_all_inside_dir(original, target);
+        if new_target.is_dir() && original.is_dir() {
+            unstow_all_inside_dir(original, &new_target, false);
         } else {
             println!("{fname} exists but it is not a symlink. Skipping...");
         }
@@ -274,7 +280,7 @@ fn unstow(original: &PathBuf, target: &PathBuf) {
  * iterates over everything inside a directory and unstows it
  * if the directory becomes empty, deletes the directory
  */
-fn unstow_all_inside_dir(original: &PathBuf, target: &PathBuf) {
+fn unstow_all_inside_dir(original: &PathBuf, target: &PathBuf, use_special_paths: bool) {
     let fname = get_name(target);
 
     let subdirs = fs::read_dir(original);
@@ -289,7 +295,7 @@ fn unstow_all_inside_dir(original: &PathBuf, target: &PathBuf) {
         .map(|e| { e.unwrap() })
         .for_each(|element| {
             write_location.push(element.file_name());
-            unstow(&element.path(), &write_location);
+            unstow(&element.path(), &write_location, use_special_paths);
             write_location.pop();
         });
 
@@ -359,6 +365,36 @@ fn prompt(message: String, is_yes_default: bool) -> bool {
     let answer = buffer.trim().to_lowercase();
     
     return (is_yes_default && answer == "") || answer == "y" || answer == "yes";
+}
+
+/*
+ * Takes path and looks its file name
+ * If it is special path, returns special path
+ * Otherwise returns same path
+ */
+fn handle_special_path(normal_path: &PathBuf) -> PathBuf {
+    let name = get_name(normal_path);
+    match name.as_ref() {
+        "@home" => {
+            match env::var("HOME") {
+                Ok(path) => {
+                    let p = PathBuf::from(path);
+
+                    if p.exists() {
+                        return p;
+                    } else {
+                        println!("Couldn't find HOME variable.");
+                        process::exit(1);
+                    }
+                }
+                Err(e) => {
+                        println!("Couldn't find HOME variable. {}", e);
+                        process::exit(1);
+                }
+            }
+        }
+        _ => normal_path.clone()
+    }
 }
 
 enum PushMode {
