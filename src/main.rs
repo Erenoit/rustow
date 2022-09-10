@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod test;
 
-use std::{env, fs::{self, DirEntry}, io::{self, Write}, path::PathBuf, process, os::unix};
+use std::{borrow::Cow, env, fs::{self, DirEntry}, io::{self, Write}, path::PathBuf, process, os::unix};
 
 fn main() {
     let mut stow_dir = env::current_dir().expect("Working directory couldn't found.");
@@ -132,10 +132,7 @@ fn handle_cmd_arguments(stow_dir: &mut PathBuf, target_dir: &mut PathBuf) -> (Ve
             ftype.unwrap().is_dir()
         })
         .filter(|e| {                     // Remove files starts with dot
-            let fname = e.file_name().into_string();
-            if fname.is_err() { return false; }
-
-            !fname.unwrap().starts_with(".")
+            !e.file_name().to_string_lossy().starts_with(".")
         })
         .collect::<Vec<_>>();
 
@@ -151,7 +148,7 @@ fn handle_cmd_arguments(stow_dir: &mut PathBuf, target_dir: &mut PathBuf) -> (Ve
  * Takes valid directories as one of its parameters
  * Checks every string in str_vec with names of every element in valid_directories
  * If mathes, adds whole path to target_vec
- * If do not math at all, asks user if they want to continue without that argument
+ * If does not match at all, asks user if they want to continue without that argument
  * If user says no, terminates the program
  */
 fn validate_directories(str_vec: &Vec<String>, target_vec: &mut Vec<PathBuf>, valid_directories: &Vec<DirEntry>) {
@@ -166,14 +163,9 @@ fn validate_directories(str_vec: &Vec<String>, target_vec: &mut Vec<PathBuf>, va
 
         if !is_valid {
             println!("Invalid argument: {arg}.");
-            print!("Do you want to continue without this argument (Y/n): ");
-            io::stdout().flush().expect("Failed to print.");
-            let mut buffer = String::new();
-            let stdin = io::stdin();
-            _ = stdin.read_line(&mut buffer);
-            let res = buffer.trim().to_lowercase();
+            let is_accepted = prompt("Do you want to continue without this argument".to_string(), true);
 
-            if res != "y" && res != "yes" && res != "" {
+            if !is_accepted {
                 process::exit(1);
             }
         }
@@ -181,15 +173,15 @@ fn validate_directories(str_vec: &Vec<String>, target_vec: &mut Vec<PathBuf>, va
 }
 
 /*
- * if there is already a folder try stow things inside the folder
- * if there is already a file ask if user wants to remove existing one and stow or cancel
+ * if there is already a symlink of the file, skips the file
+ * if there is already a symlink of a directory, delete the symlink, create a real directory,
+ * stow everything old symlink has inside directory, and stow new things inside directory
+ * if there is already a directory, tries to stow things inside the folder
+ * if there is already a file, asks the user if user wants to remove existing one and stow or cancel
  * otherwise creates symlink
  */
 fn stow(original: &PathBuf, destination: &PathBuf) {
-    let fname = destination
-        .file_name()
-        .expect("There should always be a file name.")
-        .to_string_lossy();
+    let fname = get_name(destination);
 
     if destination.is_symlink() {
         if destination.is_dir() {
@@ -201,33 +193,27 @@ fn stow(original: &PathBuf, destination: &PathBuf) {
                 stow_all_inside_dir(&real_dest.unwrap(), destination);
                 stow_all_inside_dir(original, destination);
             } else {
-                print!("There is an invalid symlink on {}. Would you like to delete it and replace with new symlink (y/N): ", fname);
-                io::stdout().flush().expect("Failed to print.");
-                let mut buffer = String::new();
-                let stdin = io::stdin();
-                _ = stdin.read_line(&mut buffer);
-                let res = buffer.trim().to_lowercase();
+                let is_accepted = prompt(
+                    format!("There is an invalid symlink on {fname}. Would you like to delete it and replace with new symlink"),
+                    false);
 
-                if res == "y" || res == "yes" {
+                if is_accepted {
                     _ = fs::remove_file(&destination);
                     _ = unix::fs::symlink(original, destination);
                 }
             }
         } else {
-            println!("{} is already stowed. Skipping...", fname);
+            println!("{fname} is already stowed. Skipping...");
         }
     } else if destination.exists() {
         if destination.is_dir() {
             stow_all_inside_dir(original, destination);
         } else {
-            print!("{} already exists, would you like to delete it and replace with symlink (y/N): ", fname);
-            io::stdout().flush().expect("Failed to print.");
-            let mut buffer = String::new();
-            let stdin = io::stdin();
-            _ = stdin.read_line(&mut buffer);
-            let res = buffer.trim().to_lowercase();
+            let is_accepted = prompt(
+                format!("{fname} already exists, would you like to delete it and replace with symlink"),
+                false);
 
-            if res == "y" || res == "yes" {
+            if is_accepted {
                 _ = fs::remove_file(&destination);
                 _ = unix::fs::symlink(original, destination);
             }
@@ -241,14 +227,11 @@ fn stow(original: &PathBuf, destination: &PathBuf) {
  * iterates over everything inside a directory and stows it
  */
 fn stow_all_inside_dir(original: &PathBuf, destination: &PathBuf) {
-    let fname = destination
-        .file_name()
-        .expect("There should always be a file name.")
-        .to_string_lossy();
+    let fname = get_name(destination);
 
     let subdirs = fs::read_dir(original);
     if subdirs.is_err() { 
-        println!("{} couldn't be read. Skipping...", fname);
+        println!("{fname} couldn't be read. Skipping...");
         return;
     }
 
@@ -265,14 +248,11 @@ fn stow_all_inside_dir(original: &PathBuf, destination: &PathBuf) {
 
 /*
  * if there is symlink, removes it
- * if there is a folder try to unstow things inside the folder
+ * if there is a directory, try to unstow things inside the folder
  * if thete is a file, prompts error and skips
  */
 fn unstow(original: &PathBuf, target: &PathBuf) {
-    let fname = target
-        .file_name()
-        .expect("There should always be a file name.")
-        .to_string_lossy();
+    let fname = get_name(target);
 
     if !target.exists() {
         println!("{fname} does not exists. Nothing to unstow.");
@@ -292,16 +272,14 @@ fn unstow(original: &PathBuf, target: &PathBuf) {
 
 /*
  * iterates over everything inside a directory and unstows it
+ * if the directory becomes empty, deletes the directory
  */
 fn unstow_all_inside_dir(original: &PathBuf, target: &PathBuf) {
-    let fname = target
-        .file_name()
-        .expect("There should always be a file name.")
-        .to_string_lossy();
+    let fname = get_name(target);
 
     let subdirs = fs::read_dir(original);
     if subdirs.is_err() { 
-        println!("{} couldn't be read. Skipping...", fname);
+        println!("{fname} couldn't be read. Skipping...");
         return;
     }
 
@@ -322,6 +300,9 @@ fn unstow_all_inside_dir(original: &PathBuf, target: &PathBuf) {
     }
 }
 
+/*
+ * Prints the help message
+ */
 fn print_help() {
     let help_str = concat!(
         "rustow version 0.1", "\n",
@@ -346,6 +327,38 @@ fn print_help() {
         );
 
     println!("{help_str}");
+}
+
+/*
+ * Returns file/directory name as str
+ * if path is "/", it returns "filesystem root"
+ */
+fn get_name(path: &PathBuf) -> Cow<'_, str> {
+    if let Some(name) = path.file_name() {
+        name.to_string_lossy()
+    } else {
+        Cow::from("filesystem root")
+    }
+}
+
+/*
+ * Writes the message to stdout and takes input from user
+ * If the input can be interpreted as "Yes", returns true
+ * otherwise returns false
+ */
+fn prompt(message: String, is_yes_default: bool) -> bool {
+    let yes_no_prompt = if is_yes_default { "(Y/n)" } else { "(y/N)" };
+    print!("{message} {yes_no_prompt}: ");
+    io::stdout().flush().expect("Failed to print.");
+
+    let mut buffer = String::new();
+    if let Err(_e) = io::stdin().read_line(&mut buffer) {
+        println!("An error accured while taking input. Program will continue with \"No\" option.");
+        return false;
+    }
+    let answer = buffer.trim().to_lowercase();
+    
+    return (is_yes_default && answer == "") || answer == "y" || answer == "yes";
 }
 
 enum PushMode {

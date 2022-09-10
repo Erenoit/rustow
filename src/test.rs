@@ -257,10 +257,7 @@ fn full_stow() {
             ftype.unwrap().is_dir()
         })
         .filter(|e| {                     // Remove files starts with dot
-            let fname = e.file_name().into_string();
-            if fname.is_err() { return false; }
-
-            !fname.unwrap().starts_with(".")
+            !e.file_name().to_string_lossy().starts_with(".")
         })
         .collect::<Vec<_>>();
 
@@ -502,10 +499,7 @@ fn full_unstow() {
             ftype.unwrap().is_dir()
         })
         .filter(|e| {                     // Remove files starts with dot
-            let fname = e.file_name().into_string();
-            if fname.is_err() { return false; }
-
-            !fname.unwrap().starts_with(".")
+            !e.file_name().to_string_lossy().starts_with(".")
         })
         .collect::<Vec<_>>();
 
@@ -553,10 +547,7 @@ fn full_unstow() {
             ftype.unwrap().is_dir()
         })
         .filter(|e| {                     // Remove files starts with dot
-            let fname = e.file_name().into_string();
-            if fname.is_err() { return false; }
-
-            !fname.unwrap().starts_with(".")
+            !e.file_name().to_string_lossy().starts_with(".")
         })
         .collect::<Vec<_>>();
 
