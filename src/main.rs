@@ -317,7 +317,7 @@ fn unstow_all_inside_dir(original: &PathBuf, target: &PathBuf, use_special_paths
 #[inline(always)]
 fn print_help() {
     println!(r#"
-rustow version 0.1
+rustow version 0.2-beta
 
 Usage:
     rustow [OPTION ...] [-S|-D|-R|-A] PACKAGE ... [-S|-D|-R|-A] PACKAGE ...
@@ -414,6 +414,10 @@ fn handle_special_path(original: &PathBuf, destination: &PathBuf) -> PathBuf {
     }
 }
 
+/*
+ * Check if file/folder belongs to root
+ * On error return false
+ */
 fn is_root_file(path: &PathBuf) -> bool {
     match dbg!(path).metadata() {
         Ok(metadata) => {
