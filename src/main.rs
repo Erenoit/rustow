@@ -1,7 +1,12 @@
 #[cfg(test)]
 mod test;
 
-use std::{borrow::Cow, env, fs::{self, DirEntry}, io::{self, Write}, path::PathBuf, process, os::unix};
+use std::{
+    borrow::Cow, env, fs::{self, DirEntry}, io::{self, Write}, path::PathBuf,
+    process, os::unix::{self, fs::MetadataExt}
+};
+
+// TODO: Handle errors instead of using "_ = func();"
 
 fn main() {
     let mut stow_dir = env::current_dir().expect("Working directory couldn't found.");
@@ -181,7 +186,7 @@ fn validate_directories(str_vec: &Vec<String>, target_vec: &mut Vec<PathBuf>, va
  * otherwise creates symlink
  */
 fn stow(original: &PathBuf, destination: &PathBuf, use_special_paths: bool) {
-    let new_dest = if use_special_paths { handle_special_path(destination) }
+    let new_dest = if use_special_paths { handle_special_path(original, destination) }
                    else { destination.clone() };
 
     let fname = get_name(&new_dest);
@@ -255,7 +260,7 @@ fn stow_all_inside_dir(original: &PathBuf, destination: &PathBuf, use_special_pa
  * if thete is a file, prompts error and skips
  */
 fn unstow(original: &PathBuf, target: &PathBuf, use_special_paths: bool) {
-    let new_target = if use_special_paths { handle_special_path(target) }
+    let new_target = if use_special_paths { handle_special_path(original, target) }
                    else { target.clone() };
 
     let fname = get_name(&new_target);
@@ -309,36 +314,36 @@ fn unstow_all_inside_dir(original: &PathBuf, target: &PathBuf, use_special_paths
 /*
  * Prints the help message
  */
+#[inline(always)]
 fn print_help() {
-    let help_str = concat!(
-        "rustow version 0.1", "\n",
-        "\n",
-        "Usage:", "\n",
-        "    rustow [OPTION ...] [-S|-D|-R|-A] PACKAGE ... [-S|-D|-R|-A] PACKAGE ...", "\n",
-        "\n",
-        "Actions:", "\n",
-        "    -S  Stow the package.", "\n",
-        "        Creates symlinks of files in the package to target directory", "\n",
-        "    -D  Unstow the package.", "\n",
-        "        Removes existing symlinks of files in the package in target directory", "\n",
-        "    -R  Restow the package.", "\n",
-        "        Same as unstowing and stowing a package", "\n",
-        "    -A  Adopt the package.", "\n",
-        "        Imports existing files in target directory to stow package. USE WITH CAUTION!", "\n",
-        "\n",
-        "Options:", "\n",
-        "    -h      --help            Prints this help message", "\n",
-        "    -d DIR  --stow-dir DIR    Set stow dir to DIR (default is current dir)", "\n",
-        "    -t DIR  --target-dir DIR  Set target dir to DIR (default is parent of stow dir)", "\n",
-        );
+    println!(r#"
+rustow version 0.1
 
-    println!("{help_str}");
+Usage:
+    rustow [OPTION ...] [-S|-D|-R|-A] PACKAGE ... [-S|-D|-R|-A] PACKAGE ...
+
+Actions:
+    -S  Stow the package.
+        Creates symlinks of files in the package to target directory
+    -D  Unstow the package.
+        Removes existing symlinks of files in the package in target directory
+    -R  Restow the package.
+        Same as unstowing and stowing a package
+    -A  Adopt the package.
+        Imports existing files in target directory to stow package. USE WITH CAUTION!
+
+Options:
+    -h      --help            Prints this help message
+    -d DIR  --stow-dir DIR    Set stow dir to DIR (default is current dir)
+    -t DIR  --target-dir DIR  Set target dir to DIR (default is parent of stow dir)
+           "#);
 }
 
 /*
  * Returns file/directory name as str
  * if path is "/", it returns "filesystem root"
  */
+#[inline(always)]
 fn get_name(path: &PathBuf) -> Cow<'_, str> {
     if let Some(name) = path.file_name() {
         name.to_string_lossy()
@@ -352,6 +357,7 @@ fn get_name(path: &PathBuf) -> Cow<'_, str> {
  * If the input can be interpreted as "Yes", returns true
  * otherwise returns false
  */
+#[inline(always)]
 fn prompt(message: String, is_yes_default: bool) -> bool {
     let yes_no_prompt = if is_yes_default { "(Y/n)" } else { "(y/N)" };
     print!("{message} {yes_no_prompt}: ");
@@ -372,8 +378,8 @@ fn prompt(message: String, is_yes_default: bool) -> bool {
  * If it is special path, returns special path
  * Otherwise returns same path
  */
-fn handle_special_path(normal_path: &PathBuf) -> PathBuf {
-    let name = get_name(normal_path);
+fn handle_special_path(original: &PathBuf, destination: &PathBuf) -> PathBuf {
+    let name = get_name(destination);
     match name.as_ref() {
         "@home" => {
             match env::var("HOME") {
@@ -393,7 +399,35 @@ fn handle_special_path(normal_path: &PathBuf) -> PathBuf {
                 }
             }
         }
-        _ => normal_path.clone()
+        "@root" => {
+            if is_root_file(original) {
+                return PathBuf::from("/");
+            } else {
+                println!("For security reasons, all the files/folders including and followed by @root file must be owned by root.");
+                println!("If you want to stow something inside your home folder, use @home instead.");
+                // TODO: add --no-security-check flag
+                //println!("Use --no-security-check flag to prevent from this error");
+                process::exit(1);
+            }
+        }
+        _ => destination.clone()
+    }
+}
+
+fn is_root_file(path: &PathBuf) -> bool {
+    match dbg!(path).metadata() {
+        Ok(metadata) => {
+            if dbg!(metadata.uid()) == 0 {
+                // TODO: Also check for child files and write permissions
+                return true;
+            } else {
+                return false;
+            }
+        }
+        Err(why) => {
+            dbg!("failed in metadata {}", why);
+            return false;
+        }
     }
 }
 
