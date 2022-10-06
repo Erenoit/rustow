@@ -24,15 +24,17 @@ $ cargo build --release
 - [x] Unstow
 - [x] Restow
 - [ ] Adopt (check GNU Stow help)
-- [x] --stow-dir and --target-dir options
+- [x] `--stow-dir` and `--target-dir` options
 - [x] Special keywords to change stow target (i.e. `@root`, `@home`)
     - [x] `@home`
     - [x] `@root` *(may need root privileges)*
 - [x] Add tests
 - [x] ~~Windows support *maybe*~~ **CANCELED**
-- [ ] Handle errors instead of using `_ = func();`
-- [ ] --verbose flag
-- [ ] --no-security-check flag
+- [x] Handle errors instead of using `_ = func();`
+- [ ] `--version` flag
+- [ ] `--verbose` flag
+- [ ] `--no-security-check` flag
+- [ ] `--simulate` flag
 - [ ] Check everything inside `@root` before stow
 
 *more things will be added as they come to my mind or suggested.*

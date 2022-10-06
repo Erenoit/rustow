@@ -1,12 +1,9 @@
+mod extras;
 #[cfg(test)]
 mod test;
 
-use std::{
-    borrow::Cow, env, fs::{self, DirEntry}, io::{self, Write}, path::PathBuf,
-    process, os::unix::{self, fs::MetadataExt}
-};
-
-// TODO: Handle errors instead of using "_ = func();"
+use crate::extras::*;
+use std::{env, fs::{self, DirEntry}, path::PathBuf, process};
 
 fn main() {
     let mut stow_dir = env::current_dir().expect("Working directory couldn't found.");
@@ -105,6 +102,9 @@ fn handle_cmd_arguments(stow_dir: &mut PathBuf, target_dir: &mut PathBuf) -> (Ve
 
                     *target_dir = new_dir;
                 }
+                // TODO: Add -v, --verbose flag
+                // TODO: Add -V, --version flag
+                // TODO: Add -s, --simulate flag
                 _ => {
                     println!("Unknown argument: {argument}.");
                     println!("Use `rustow -h` for available arguments.");
@@ -193,12 +193,11 @@ fn stow(original: &PathBuf, destination: &PathBuf, use_special_paths: bool) {
 
     if new_dest.is_symlink() {
         if new_dest.is_dir() {
-            let real_dest = fs::canonicalize(&new_dest);
-            if real_dest.is_ok(){
-                _ = fs::remove_file(&new_dest);
-                _ = fs::create_dir(&new_dest);
+            if let Ok (real_dest) = fs::canonicalize(&new_dest) {
+                remove_symlink(&new_dest);
+                create_dir(&new_dest);
 
-                stow_all_inside_dir(&real_dest.unwrap(), &new_dest, false);
+                stow_all_inside_dir(&real_dest, &new_dest, false);
                 stow_all_inside_dir(original, &new_dest, false);
             } else {
                 let is_accepted = prompt(
@@ -206,8 +205,8 @@ fn stow(original: &PathBuf, destination: &PathBuf, use_special_paths: bool) {
                     false);
 
                 if is_accepted {
-                    _ = fs::remove_file(&new_dest);
-                    _ = unix::fs::symlink(original, &new_dest);
+                    remove_symlink(&new_dest);
+                    create_symlink(original, &new_dest);
                 }
             }
         } else {
@@ -222,12 +221,12 @@ fn stow(original: &PathBuf, destination: &PathBuf, use_special_paths: bool) {
                 false);
 
             if is_accepted {
-                _ = fs::remove_file(&new_dest);
-                _ = unix::fs::symlink(original, &new_dest);
+                remove_file(&new_dest);
+                create_symlink(original, &new_dest);
             }
         }
     } else {
-        _ = unix::fs::symlink(original, &new_dest);
+        create_symlink(original, &new_dest);
     }
 }
 
@@ -271,7 +270,7 @@ fn unstow(original: &PathBuf, target: &PathBuf, use_special_paths: bool) {
     }
 
     if new_target.is_symlink() {
-        _ = fs::remove_file(&new_target);
+        remove_symlink(&new_target);
     } else {
         if new_target.is_dir() && original.is_dir() {
             unstow_all_inside_dir(original, &new_target, false);
@@ -306,7 +305,7 @@ fn unstow_all_inside_dir(original: &PathBuf, target: &PathBuf, use_special_paths
 
     if let Ok(mut dir_iterator) = fs::read_dir(target) {
         if dir_iterator.next().is_none() {
-            _ = fs::remove_dir(target);
+            remove_dir(target);
         }
     }
 }
@@ -337,40 +336,6 @@ Options:
     -d DIR  --stow-dir DIR    Set stow dir to DIR (default is current dir)
     -t DIR  --target-dir DIR  Set target dir to DIR (default is parent of stow dir)
            "#);
-}
-
-/*
- * Returns file/directory name as str
- * if path is "/", it returns "filesystem root"
- */
-#[inline(always)]
-fn get_name(path: &PathBuf) -> Cow<'_, str> {
-    if let Some(name) = path.file_name() {
-        name.to_string_lossy()
-    } else {
-        Cow::from("filesystem root")
-    }
-}
-
-/*
- * Writes the message to stdout and takes input from user
- * If the input can be interpreted as "Yes", returns true
- * otherwise returns false
- */
-#[inline(always)]
-fn prompt(message: String, is_yes_default: bool) -> bool {
-    let yes_no_prompt = if is_yes_default { "(Y/n)" } else { "(y/N)" };
-    print!("{message} {yes_no_prompt}: ");
-    io::stdout().flush().expect("Failed to print.");
-
-    let mut buffer = String::new();
-    if let Err(_e) = io::stdin().read_line(&mut buffer) {
-        println!("An error accured while taking input. Program will continue with \"No\" option.");
-        return false;
-    }
-    let answer = buffer.trim().to_lowercase();
-    
-    return (is_yes_default && answer == "") || answer == "y" || answer == "yes";
 }
 
 /*
@@ -411,27 +376,6 @@ fn handle_special_path(original: &PathBuf, destination: &PathBuf) -> PathBuf {
             }
         }
         _ => destination.clone()
-    }
-}
-
-/*
- * Check if file/folder belongs to root
- * On error return false
- */
-fn is_root_file(path: &PathBuf) -> bool {
-    match dbg!(path).metadata() {
-        Ok(metadata) => {
-            if dbg!(metadata.uid()) == 0 {
-                // TODO: Also check for child files and write permissions
-                return true;
-            } else {
-                return false;
-            }
-        }
-        Err(why) => {
-            dbg!("failed in metadata {}", why);
-            return false;
-        }
     }
 }
 

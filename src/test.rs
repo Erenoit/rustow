@@ -1,4 +1,5 @@
 use super::*;
+use std::io;
 
 /*
  * Unit tests module
