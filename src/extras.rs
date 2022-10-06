@@ -1,3 +1,4 @@
+use crate::options::Options;
 use std::{
     borrow::Cow, fs, io::{self, Write, ErrorKind}, path::PathBuf,
     os::unix::{self, fs::MetadataExt}
@@ -6,7 +7,7 @@ use std::{
 // TODO: When "io_error_more" becomes stable chaeck for commented errors as well
 
 #[inline(always)]
-pub fn create_symlink(original: &PathBuf, destination: &PathBuf) -> bool {
+pub fn create_symlink(original: &PathBuf, destination: &PathBuf, options: &Options) -> bool {
     if let Err(why) = unix::fs::symlink(original, destination) {
         match why.kind() {
             ErrorKind::PermissionDenied => {
@@ -49,7 +50,7 @@ pub fn create_symlink(original: &PathBuf, destination: &PathBuf) -> bool {
 }
 
 #[inline(always)]
-pub fn remove_symlink(path: &PathBuf) -> bool {
+pub fn remove_symlink(path: &PathBuf, options: &Options) -> bool {
     if let Err(why) = fs::remove_file(path) {
         match why.kind() {
             ErrorKind::PermissionDenied => {
@@ -82,7 +83,7 @@ pub fn remove_symlink(path: &PathBuf) -> bool {
 }
 
 #[inline(always)]
-pub fn create_dir(path: &PathBuf) -> bool {
+pub fn create_dir(path: &PathBuf, options: &Options) -> bool {
     if let Err(why) = fs::create_dir_all(path) {
         match why.kind() {
             ErrorKind::PermissionDenied => {
@@ -125,7 +126,7 @@ pub fn create_dir(path: &PathBuf) -> bool {
 }
 
 #[inline(always)]
-pub fn remove_dir(path: &PathBuf) -> bool {
+pub fn remove_dir(path: &PathBuf, options: &Options) -> bool {
     if let Err(why) = fs::remove_dir_all(path) {
         match why.kind() {
             ErrorKind::PermissionDenied => {
@@ -163,7 +164,7 @@ pub fn remove_dir(path: &PathBuf) -> bool {
 }
 
 #[inline(always)]
-pub fn remove_file(path: &PathBuf) -> bool {
+pub fn remove_file(path: &PathBuf, options: &Options) -> bool {
     if let Err(why) = fs::remove_file(path) {
         match why.kind() {
             ErrorKind::PermissionDenied => {

@@ -1,33 +1,32 @@
 mod extras;
+mod options;
 #[cfg(test)]
 mod test;
 
 use crate::extras::*;
+use crate::options::Options;
 use std::{env, fs::{self, DirEntry}, path::PathBuf, process};
 
 fn main() {
-    let mut stow_dir = env::current_dir().expect("Working directory couldn't found.");
-    let mut target_dir = stow_dir.clone();
-    target_dir.pop();
-
-    let (stow_l, unstow_l, restow_l, adopt_l) = handle_cmd_arguments(&mut stow_dir, &mut target_dir);
+    let mut options = Options::default();
+    let (stow_l, unstow_l, restow_l, adopt_l) = handle_cmd_arguments(&mut options);
 
     if unstow_l.len() > 0 {
         for directory in unstow_l {
-            unstow_all_inside_dir(&directory, &target_dir, true);
+            unstow_all_inside_dir(&directory, &options.target_dir, options.special_keywords, &options);
         }
     }
 
     if restow_l.len() > 0 {
         for directory in restow_l {
-            unstow_all_inside_dir(&directory, &target_dir, true);
-            stow_all_inside_dir(&directory, &target_dir, true);
+            unstow_all_inside_dir(&directory, &options.target_dir, options.special_keywords, &options);
+            stow_all_inside_dir(&directory, &options.target_dir, options.special_keywords, &options);
         }
     }
 
     if stow_l.len() > 0 {
         for directory in stow_l {
-            stow_all_inside_dir(&directory, &target_dir, true);
+            stow_all_inside_dir(&directory, &options.target_dir, options.special_keywords, &options);
         }
     }
 
@@ -43,7 +42,7 @@ fn main() {
  * if there is an invalid argument (one doesn't match with a directory name) prompts error
  * and asks if user wants to comtinue without that argument
  */
-fn handle_cmd_arguments(stow_dir: &mut PathBuf, target_dir: &mut PathBuf) -> (Vec<PathBuf>, Vec<PathBuf>, Vec<PathBuf>, Vec<PathBuf>) {
+fn handle_cmd_arguments(options: &mut Options) -> (Vec<PathBuf>, Vec<PathBuf>, Vec<PathBuf>, Vec<PathBuf>) {
     let mut str_stow   = Vec::<String>::with_capacity(10);
     let mut str_unstow = Vec::<String>::with_capacity(10);
     let mut str_restow = Vec::<String>::with_capacity(10);
@@ -88,7 +87,7 @@ fn handle_cmd_arguments(stow_dir: &mut PathBuf, target_dir: &mut PathBuf) -> (Ve
                         process::exit(1);
                     }
 
-                    *stow_dir = new_dir;
+                    options.stow_dir = new_dir;
                 }
                 "-t" | "--target-dir" => {
                     let new_dir = match args.next() {
@@ -104,10 +103,24 @@ fn handle_cmd_arguments(stow_dir: &mut PathBuf, target_dir: &mut PathBuf) -> (Ve
                         process::exit(1);
                     }
 
-                    *target_dir = new_dir;
+                    options.target_dir = new_dir;
                 }
-                // TODO: Add -v, --verbose flag
-                // TODO: Add -s, --simulate flag
+                "-v" | "--verbose" => {
+                    options.verbose = true;
+                    println!("--verbose flag is not implemented yet. It will have no effect.");
+                }
+                "-s" | "--simulate" => {
+                    options.simulate = true;
+                    println!("--simulate flag is not implemented yet. It will have no effect.");
+                }
+                "--no-special-keywords" => {
+                    options.special_keywords = false;
+                    println!("--no-special-keywords flag is not implemented yet. It will have no effect.");
+                }
+                "--no-security-check" => {
+                    options.security_check = false;
+                    println!("--no-security-check flag is not implemented yet. It will have no effect.");
+                }
                 _ => {
                     println!("Unknown argument: {argument}.");
                     println!("Use `rustow -h` for available arguments.");
@@ -129,7 +142,7 @@ fn handle_cmd_arguments(stow_dir: &mut PathBuf, target_dir: &mut PathBuf) -> (Ve
     let mut restow_l = Vec::<PathBuf>::with_capacity(str_restow.len());
     let mut adopt_l  = Vec::<PathBuf>::with_capacity(str_adopt.len());
 
-    let directories = fs::read_dir(&stow_dir)
+    let directories = fs::read_dir(&options.stow_dir)
         .expect("Couldn't read working directory.")
         .filter(|e| { e.is_ok() })        // Remove errors
         .map(|e| { e.unwrap() })
@@ -188,8 +201,8 @@ fn validate_directories(str_vec: &Vec<String>, target_vec: &mut Vec<PathBuf>, va
  * if there is already a file, asks the user if user wants to remove existing one and stow or cancel
  * otherwise creates symlink
  */
-fn stow(original: &PathBuf, destination: &PathBuf, use_special_paths: bool) {
-    let new_dest = if use_special_paths { handle_special_path(original, destination) }
+fn stow(original: &PathBuf, destination: &PathBuf, use_special_paths: bool, options: &Options) {
+    let new_dest = if use_special_paths { handle_special_path(original, destination, options) }
                    else { destination.clone() };
 
     let fname = get_name(&new_dest);
@@ -197,19 +210,19 @@ fn stow(original: &PathBuf, destination: &PathBuf, use_special_paths: bool) {
     if new_dest.is_symlink() {
         if new_dest.is_dir() {
             if let Ok (real_dest) = fs::canonicalize(&new_dest) {
-                remove_symlink(&new_dest);
-                create_dir(&new_dest);
+                remove_symlink(&new_dest, options);
+                create_dir(&new_dest, options);
 
-                stow_all_inside_dir(&real_dest, &new_dest, false);
-                stow_all_inside_dir(original, &new_dest, false);
+                stow_all_inside_dir(&real_dest, &new_dest, false, options);
+                stow_all_inside_dir(original, &new_dest, false, options);
             } else {
                 let is_accepted = prompt(
                     format!("There is an invalid symlink on {fname}. Would you like to delete it and replace with new symlink"),
                     false);
 
                 if is_accepted {
-                    remove_symlink(&new_dest);
-                    create_symlink(original, &new_dest);
+                    remove_symlink(&new_dest, options);
+                    create_symlink(original, &new_dest, options);
                 }
             }
         } else {
@@ -217,26 +230,26 @@ fn stow(original: &PathBuf, destination: &PathBuf, use_special_paths: bool) {
         }
     } else if new_dest.exists() {
         if new_dest.is_dir() {
-            stow_all_inside_dir(original, &new_dest, false);
+            stow_all_inside_dir(original, &new_dest, false, options);
         } else {
             let is_accepted = prompt(
                 format!("{fname} already exists, would you like to delete it and replace with symlink"),
                 false);
 
             if is_accepted {
-                remove_file(&new_dest);
-                create_symlink(original, &new_dest);
+                remove_file(&new_dest, options);
+                create_symlink(original, &new_dest, options);
             }
         }
     } else {
-        create_symlink(original, &new_dest);
+        create_symlink(original, &new_dest, options);
     }
 }
 
 /*
  * iterates over everything inside a directory and stows it
  */
-fn stow_all_inside_dir(original: &PathBuf, destination: &PathBuf, use_special_paths: bool) {
+fn stow_all_inside_dir(original: &PathBuf, destination: &PathBuf, use_special_paths: bool, options: &Options) {
     let fname = get_name(destination);
 
     let subdirs = fs::read_dir(original);
@@ -251,7 +264,7 @@ fn stow_all_inside_dir(original: &PathBuf, destination: &PathBuf, use_special_pa
         .map(|e| { e.unwrap() })
         .for_each(|element| {
             write_location.push(element.file_name());
-            stow(&element.path(), &write_location, use_special_paths);
+            stow(&element.path(), &write_location, use_special_paths, options);
             write_location.pop();
         });
 }
@@ -261,8 +274,8 @@ fn stow_all_inside_dir(original: &PathBuf, destination: &PathBuf, use_special_pa
  * if there is a directory, try to unstow things inside the folder
  * if thete is a file, prompts error and skips
  */
-fn unstow(original: &PathBuf, target: &PathBuf, use_special_paths: bool) {
-    let new_target = if use_special_paths { handle_special_path(original, target) }
+fn unstow(original: &PathBuf, target: &PathBuf, use_special_paths: bool, options: &Options) {
+    let new_target = if use_special_paths { handle_special_path(original, target, options) }
                    else { target.clone() };
 
     let fname = get_name(&new_target);
@@ -273,10 +286,10 @@ fn unstow(original: &PathBuf, target: &PathBuf, use_special_paths: bool) {
     }
 
     if new_target.is_symlink() {
-        remove_symlink(&new_target);
+        remove_symlink(&new_target, options);
     } else {
         if new_target.is_dir() && original.is_dir() {
-            unstow_all_inside_dir(original, &new_target, false);
+            unstow_all_inside_dir(original, &new_target, false, options);
         } else {
             println!("{fname} exists but it is not a symlink. Skipping...");
         }
@@ -287,7 +300,7 @@ fn unstow(original: &PathBuf, target: &PathBuf, use_special_paths: bool) {
  * iterates over everything inside a directory and unstows it
  * if the directory becomes empty, deletes the directory
  */
-fn unstow_all_inside_dir(original: &PathBuf, target: &PathBuf, use_special_paths: bool) {
+fn unstow_all_inside_dir(original: &PathBuf, target: &PathBuf, use_special_paths: bool, options: &Options) {
     let fname = get_name(target);
 
     let subdirs = fs::read_dir(original);
@@ -302,13 +315,13 @@ fn unstow_all_inside_dir(original: &PathBuf, target: &PathBuf, use_special_paths
         .map(|e| { e.unwrap() })
         .for_each(|element| {
             write_location.push(element.file_name());
-            unstow(&element.path(), &write_location, use_special_paths);
+            unstow(&element.path(), &write_location, use_special_paths, options);
             write_location.pop();
         });
 
     if let Ok(mut dir_iterator) = fs::read_dir(target) {
         if dir_iterator.next().is_none() {
-            remove_dir(target);
+            remove_dir(target, options);
         }
     }
 }
@@ -354,7 +367,7 @@ Options:
  * If it is special path, returns special path
  * Otherwise returns same path
  */
-fn handle_special_path(original: &PathBuf, destination: &PathBuf) -> PathBuf {
+fn handle_special_path(original: &PathBuf, destination: &PathBuf, options: &Options) -> PathBuf {
     let name = get_name(destination);
     match name.as_ref() {
         "@home" => {
@@ -376,7 +389,7 @@ fn handle_special_path(original: &PathBuf, destination: &PathBuf) -> PathBuf {
             }
         }
         "@root" => {
-            if is_root_file(original) {
+            if !options.security_check || is_root_file(original) {
                 return PathBuf::from("/");
             } else {
                 println!("For security reasons, all the files/folders including and followed by @root file must be owned by root.");
