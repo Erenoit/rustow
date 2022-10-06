@@ -70,6 +70,10 @@ fn handle_cmd_arguments(stow_dir: &mut PathBuf, target_dir: &mut PathBuf) -> (Ve
                     print_help();
                     process::exit(0);
                 }
+                "-V" | "--version" => {
+                    print_version();
+                    process::exit(0);
+                }
                 "-d" | "--stow-dir" => {
                     let new_dir = match args.next() {
                         Some(a) => PathBuf::from(a),
@@ -103,7 +107,6 @@ fn handle_cmd_arguments(stow_dir: &mut PathBuf, target_dir: &mut PathBuf) -> (Ve
                     *target_dir = new_dir;
                 }
                 // TODO: Add -v, --verbose flag
-                // TODO: Add -V, --version flag
                 // TODO: Add -s, --simulate flag
                 _ => {
                     println!("Unknown argument: {argument}.");
@@ -311,13 +314,20 @@ fn unstow_all_inside_dir(original: &PathBuf, target: &PathBuf, use_special_paths
 }
 
 /*
+ * Prints version info
+ */
+#[inline(always)]
+fn print_version() {
+    println!("rustow version 0.2-beta");
+}
+
+/*
  * Prints the help message
  */
 #[inline(always)]
 fn print_help() {
+    print_version();
     println!(r#"
-rustow version 0.2-beta
-
 Usage:
     rustow [OPTION ...] [-S|-D|-R|-A] PACKAGE ... [-S|-D|-R|-A] PACKAGE ...
 
@@ -333,6 +343,7 @@ Actions:
 
 Options:
     -h      --help            Prints this help message
+    -V      --version         Prints version info
     -d DIR  --stow-dir DIR    Set stow dir to DIR (default is current dir)
     -t DIR  --target-dir DIR  Set target dir to DIR (default is parent of stow dir)
            "#);

@@ -31,8 +31,9 @@ $ cargo build --release
 - [x] Add tests
 - [x] ~~Windows support *maybe*~~ **CANCELED**
 - [x] Handle errors instead of using `_ = func();`
-- [ ] `--version` flag
+- [x] `--version` flag
 - [ ] `--verbose` flag
+- [ ] `--no-special-keywords` flag
 - [ ] `--no-security-check` flag
 - [ ] `--simulate` flag
 - [ ] Check everything inside `@root` before stow
