@@ -123,7 +123,6 @@ fn handle_cmd_arguments(options: &mut Options) -> (Vec<PathBuf>, Vec<PathBuf>, V
                 }
                 "--no-security-check" => {
                     options.security_check = false;
-                    println!("--no-security-check flag is not implemented yet. It will have no effect.");
                 }
                 _ => {
                     println!("Unknown argument: {argument}.");
@@ -477,10 +476,14 @@ fn handle_special_path(original: &PathBuf, destination: &PathBuf, options: &Opti
             if !options.security_check || is_root_file(original) {
                 return PathBuf::from("/");
             } else {
-                println!("For security reasons, all the files/folders including and followed by @root file must be owned by root.");
-                println!("If you want to stow something inside your home folder, use @home instead.");
-                // TODO: add --no-security-check flag
-                //println!("Use --no-security-check flag to prevent from this error");
+                println!(r#"
+For security reasons, all the files/folders including and followed by @root file must be owned by root.
+This requred to prevent giving others access to important system files by mistake.
+(Because the owner of the file will be the user who runs Rustow)
+Also creating a symlink to a path followed by @root generally needs root access anyway.
+If you want to stow something inside your home folder, use @home instead.
+Use --no-security-check flag to prevent from this error
+"#);
                 process::exit(1);
             }
         }
