@@ -208,6 +208,12 @@ fn stow(original: &PathBuf, destination: &PathBuf, use_special_paths: bool, opti
     if new_dest.is_symlink() {
         if new_dest.is_dir() {
             if let Ok(real_dest) = fs::canonicalize(&new_dest) {
+                if &real_dest == original {
+                    if options.verbose {
+                        println!("{fname} is already stowed. Skipping...");
+                    }
+                    return;
+                }
                 remove_symlink(&new_dest, options);
                 create_dir(&new_dest, options);
 
