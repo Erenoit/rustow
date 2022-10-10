@@ -337,7 +337,7 @@ fn unstow_all_inside_dir(original: &PathBuf, target: &PathBuf, use_special_paths
  */
 #[inline(always)]
 fn print_version() {
-    println!("rustow version 0.2-beta");
+    println!("rustow version 0.3-beta");
 }
 
 /*
