@@ -33,7 +33,10 @@ fn main() {
     }
 
     if adopt_l.len() > 0 {
-        println!("Adopt functionality is not implemented yet. Skipping...");
+        for directory in adopt_l {
+            adopt_all_inside_dir(&directory, &options.target_dir, options.special_keywords, &options);
+            stow_all_inside_dir(&directory, &options.target_dir, options.special_keywords, &options);
+        }
     }
 }
 
@@ -339,6 +342,71 @@ fn unstow_all_inside_dir(original: &PathBuf, target: &PathBuf, use_special_paths
             remove_dir(target, options);
         }
     }
+}
+
+/*
+ * if path points to a file, adopts it
+ * if path points to a file, sends back to adopt_all_inside_dir() to adopt everything insdide the
+ * file
+ * even though original and target variables should be reversed for logical reasons, it kept same
+ * for consistency
+ */
+fn adopt(original: &PathBuf, target: &PathBuf, use_special_paths: bool, options: &Options) {
+    let new_target = if use_special_paths { handle_special_path(original, target, options) }
+                   else { target.clone() };
+
+    let fname = get_name(&new_target);
+
+    if !new_target.exists() {
+        if options.verbose {
+            println!("{fname} does not exists. Nothing to adopt.");
+        }
+        return;
+    }
+
+    if new_target.is_dir() && target.is_dir() {
+        adopt_all_inside_dir(original, &new_target, false, options);
+    } else if new_target.is_file() && target.is_file() {
+        let mut backup_path = original.clone();
+        backup_path.pop();
+        backup_path.push(format!("{fname}_backup"));
+
+        move_file(original, &backup_path, options);
+        let success = move_file(&new_target, original, options);
+
+        if success {
+            remove_file(&backup_path, options);
+        } else {
+            move_file(&backup_path, original, options);
+        }
+    } else if options.verbose {
+        println!("Original and target are not same type (one is file but other is directory). Skipping...");
+    }
+}
+
+/*
+ * iterates over everything inside a directory and sends everything to adopt()
+ */
+fn adopt_all_inside_dir(original: &PathBuf, target: &PathBuf, use_special_paths: bool, options: &Options) {
+    let fname = get_name(target);
+
+    let subdirs = fs::read_dir(original);
+    if subdirs.is_err() { 
+        if options.verbose {
+            println!("{fname} couldn't be read. Skipping...");
+        }
+        return;
+    }
+
+    let mut write_location = target.clone();
+    subdirs.unwrap()
+        .filter(|e| { e.is_ok() })
+        .map(|e| { e.unwrap() })
+        .for_each(|element| {
+            write_location.push(element.file_name());
+            adopt(&element.path(), &write_location, use_special_paths, options);
+            write_location.pop();
+        });
 }
 
 /*

@@ -232,6 +232,108 @@ pub fn remove_file(path: &PathBuf, options: &Options) -> bool {
     return true;
 }
 
+/*
+ * Tries to rename file, if it fails tries to copy file and then remove old one if copy successes
+ */
+#[inline(always)]
+pub fn move_file(from: &PathBuf, to: &PathBuf, options: &Options) -> bool {
+    if options.verbose {
+        println!(r#"MOVE FILE:
+    from: {}
+    to:   {}"#, from.to_string_lossy(), to.to_string_lossy());
+    }
+
+    if options.simulate { return true; }
+
+    let mut try_other = false;
+
+    if let Err(why) = fs::rename(from, to) {
+        try_other = true;
+        match why.kind() {
+            ErrorKind::PermissionDenied => {
+                println!("Couldn't move file '{}'. Permission denied.", get_name(from));
+                try_other = false;
+            }
+            ErrorKind::NotFound => {
+                println!("Couldn't move file '{}'. Not found.", get_name(from));
+                unreachable_msg();
+                unreachable!();
+            }
+            ErrorKind::AlreadyExists => {
+                println!("Couldn't move file '{}'. Already exits.", get_name(from));
+                unreachable_msg();
+                unreachable!();
+            }
+            ErrorKind::Unsupported => { /* Nothing */ }
+            /*
+            ErrorKind::IsADirectory => {
+                println!("Couldn't move file '{}'. is a directory.", get_name(path));
+                try_other = false;
+                unreachable_msg();
+                unreachable!();
+            }
+            ErrorKind::InvalidFilename => {
+                println!("Couldn't move file '{}'. Invalid filename.", get_name(path));
+                try_other = false;
+                unreachable_msg();
+                unreachable!();
+            }
+            */
+            _ => println!("Unknown error occured {:?}", why.kind()),
+        }
+
+        if !try_other {
+            return false;
+        }
+    }
+
+    if try_other {
+        if let Err(why) = fs::copy(from, to) {
+            match why.kind() {
+                ErrorKind::PermissionDenied => {
+                    println!("Couldn't move file '{}'. Permission denied.", get_name(from));
+                }
+                ErrorKind::NotFound => {
+                    println!("Couldn't move file '{}'. Not found.", get_name(from));
+                    unreachable_msg();
+                    unreachable!();
+                }
+                ErrorKind::AlreadyExists => {
+                    println!("Couldn't move file '{}'. Already exits.", get_name(from));
+                    unreachable_msg();
+                    unreachable!();
+                }
+                ErrorKind::Unsupported => {
+                    println!("Couldn't move file '{}'. Unsupported.", get_name(from));
+                    unreachable_msg();
+                    unreachable!();
+                }
+                /*
+                ErrorKind::IsADirectory => {
+                    println!("Couldn't move file '{}'. is a directory.", get_name(path));
+                    try_other = false;
+                    unreachable_msg();
+                    unreachable!();
+                }
+                ErrorKind::InvalidFilename => {
+                    println!("Couldn't move file '{}'. Invalid filename.", get_name(path));
+                    try_other = false;
+                    unreachable_msg();
+                    unreachable!();
+                }
+                */
+                _ => println!("Unknown error occured {:?}", why.kind()),
+            }
+
+            return false;
+        } else {
+            return remove_file(from, options);
+        }
+    }
+
+    return true;
+}
+
 #[inline(always)]
 fn unreachable_msg() {
     println!(r#"
