@@ -414,7 +414,7 @@ fn adopt_all_inside_dir(original: &PathBuf, target: &PathBuf, use_special_paths:
  */
 #[inline(always)]
 fn print_version() {
-    println!("rustow version 0.3-beta");
+    println!("rustow version 0.4-beta");
 }
 
 /*
