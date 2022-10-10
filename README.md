@@ -32,7 +32,7 @@ $ cargo build --release
 - [x] ~~Windows support *maybe*~~ **CANCELED**
 - [x] Handle errors instead of using `_ = func();`
 - [x] `--version` flag
-- [ ] `--verbose` flag
+- [x] `--verbose` flag
 - [ ] `--no-special-keywords` flag
 - [ ] `--no-security-check` flag
 - [ ] `--simulate` flag

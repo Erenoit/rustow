@@ -8,6 +8,12 @@ use std::{
 
 #[inline(always)]
 pub fn create_symlink(original: &PathBuf, destination: &PathBuf, options: &Options) -> bool {
+    if options.verbose {
+        println!(r#"CREATE SYMLINK:
+    original file path: {}
+    symlink path:       {}"#, original.to_string_lossy(), destination.to_string_lossy());
+    }
+
     if let Err(why) = unix::fs::symlink(original, destination) {
         match why.kind() {
             ErrorKind::PermissionDenied => {
@@ -51,6 +57,11 @@ pub fn create_symlink(original: &PathBuf, destination: &PathBuf, options: &Optio
 
 #[inline(always)]
 pub fn remove_symlink(path: &PathBuf, options: &Options) -> bool {
+    if options.verbose {
+        println!(r#"REMOVE SYMLINK:
+    symlink path: {}"#, path.to_string_lossy());
+    }
+
     if let Err(why) = fs::remove_file(path) {
         match why.kind() {
             ErrorKind::PermissionDenied => {
@@ -84,6 +95,11 @@ pub fn remove_symlink(path: &PathBuf, options: &Options) -> bool {
 
 #[inline(always)]
 pub fn create_dir(path: &PathBuf, options: &Options) -> bool {
+    if options.verbose {
+        println!(r#"CREATE DIRECTORY:
+    directory path: {}"#, path.to_string_lossy());
+    }
+
     if let Err(why) = fs::create_dir_all(path) {
         match why.kind() {
             ErrorKind::PermissionDenied => {
@@ -127,6 +143,11 @@ pub fn create_dir(path: &PathBuf, options: &Options) -> bool {
 
 #[inline(always)]
 pub fn remove_dir(path: &PathBuf, options: &Options) -> bool {
+    if options.verbose {
+        println!(r#"REMOVE DIRECTORY:
+    directory path: {}"#, path.to_string_lossy());
+    }
+
     if let Err(why) = fs::remove_dir_all(path) {
         match why.kind() {
             ErrorKind::PermissionDenied => {
@@ -165,6 +186,11 @@ pub fn remove_dir(path: &PathBuf, options: &Options) -> bool {
 
 #[inline(always)]
 pub fn remove_file(path: &PathBuf, options: &Options) -> bool {
+    if options.verbose {
+        println!(r#"REMOVE FILE:
+    file path: {}"#, path.to_string_lossy());
+    }
+
     if let Err(why) = fs::remove_file(path) {
         match why.kind() {
             ErrorKind::PermissionDenied => {

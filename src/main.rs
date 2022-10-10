@@ -107,7 +107,6 @@ fn handle_cmd_arguments(options: &mut Options) -> (Vec<PathBuf>, Vec<PathBuf>, V
                 }
                 "-v" | "--verbose" => {
                     options.verbose = true;
-                    println!("--verbose flag is not implemented yet. It will have no effect.");
                 }
                 "-s" | "--simulate" => {
                     options.simulate = true;
@@ -209,7 +208,7 @@ fn stow(original: &PathBuf, destination: &PathBuf, use_special_paths: bool, opti
 
     if new_dest.is_symlink() {
         if new_dest.is_dir() {
-            if let Ok (real_dest) = fs::canonicalize(&new_dest) {
+            if let Ok(real_dest) = fs::canonicalize(&new_dest) {
                 remove_symlink(&new_dest, options);
                 create_dir(&new_dest, options);
 
@@ -223,9 +222,11 @@ fn stow(original: &PathBuf, destination: &PathBuf, use_special_paths: bool, opti
                 if is_accepted {
                     remove_symlink(&new_dest, options);
                     create_symlink(original, &new_dest, options);
+                } else if options.verbose {
+                    println!("{fname} is already stowed. Skipping...");
                 }
             }
-        } else {
+        } else if options.verbose {
             println!("{fname} is already stowed. Skipping...");
         }
     } else if new_dest.exists() {
@@ -254,7 +255,9 @@ fn stow_all_inside_dir(original: &PathBuf, destination: &PathBuf, use_special_pa
 
     let subdirs = fs::read_dir(original);
     if subdirs.is_err() { 
-        println!("{fname} couldn't be read. Skipping...");
+        if options.verbose {
+            println!("{fname} couldn't be read. Skipping...");
+        }
         return;
     }
 
@@ -281,7 +284,9 @@ fn unstow(original: &PathBuf, target: &PathBuf, use_special_paths: bool, options
     let fname = get_name(&new_target);
 
     if !new_target.exists() {
-        println!("{fname} does not exists. Nothing to unstow.");
+        if options.verbose {
+            println!("{fname} does not exists. Nothing to unstow.");
+        }
         return;
     }
 
@@ -290,7 +295,7 @@ fn unstow(original: &PathBuf, target: &PathBuf, use_special_paths: bool, options
     } else {
         if new_target.is_dir() && original.is_dir() {
             unstow_all_inside_dir(original, &new_target, false, options);
-        } else {
+        } else if options.verbose {
             println!("{fname} exists but it is not a symlink. Skipping...");
         }
     }
@@ -305,7 +310,9 @@ fn unstow_all_inside_dir(original: &PathBuf, target: &PathBuf, use_special_paths
 
     let subdirs = fs::read_dir(original);
     if subdirs.is_err() { 
-        println!("{fname} couldn't be read. Skipping...");
+        if options.verbose {
+            println!("{fname} couldn't be read. Skipping...");
+        }
         return;
     }
 
