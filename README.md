@@ -33,7 +33,7 @@ $ cargo build --release
 - [x] Handle errors instead of using `_ = func();`
 - [x] `--version` flag
 - [x] `--verbose` flag
-- [ ] `--no-special-keywords` flag
+- [x] `--no-special-keywords` flag
 - [ ] `--no-security-check` flag
 - [ ] `--simulate` flag
 - [ ] Check everything inside `@root` before stow

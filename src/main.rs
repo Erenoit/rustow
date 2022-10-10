@@ -114,7 +114,6 @@ fn handle_cmd_arguments(options: &mut Options) -> (Vec<PathBuf>, Vec<PathBuf>, V
                 }
                 "--no-special-keywords" => {
                     options.special_keywords = false;
-                    println!("--no-special-keywords flag is not implemented yet. It will have no effect.");
                 }
                 "--no-security-check" => {
                     options.security_check = false;
@@ -375,6 +374,8 @@ Options:
  * Otherwise returns same path
  */
 fn handle_special_path(original: &PathBuf, destination: &PathBuf, options: &Options) -> PathBuf {
+    if !options.special_keywords { return destination.clone(); }
+
     let name = get_name(destination);
     match name.as_ref() {
         "@home" => {
