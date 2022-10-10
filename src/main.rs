@@ -7,6 +7,8 @@ use crate::extras::*;
 use crate::options::Options;
 use std::{env, fs::{self, DirEntry}, path::PathBuf, process};
 
+// TODO: make --simulate keeo trck of changes so it will generate more real outcome
+
 fn main() {
     let mut options = Options::default();
     let (stow_l, unstow_l, restow_l, adopt_l) = handle_cmd_arguments(&mut options);
@@ -110,7 +112,8 @@ fn handle_cmd_arguments(options: &mut Options) -> (Vec<PathBuf>, Vec<PathBuf>, V
                 }
                 "-s" | "--simulate" => {
                     options.simulate = true;
-                    println!("--simulate flag is not implemented yet. It will have no effect.");
+                    /* If it does not print anythink, there is no purpose for simulating */
+                    options.verbose = true;
                 }
                 "--no-special-keywords" => {
                     options.special_keywords = false;

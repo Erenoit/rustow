@@ -35,7 +35,7 @@ $ cargo build --release
 - [x] `--verbose` flag
 - [x] `--no-special-keywords` flag
 - [ ] `--no-security-check` flag
-- [ ] `--simulate` flag
-- [ ] Check everything inside `@root` before stow
+- [x] `--simulate` flag
+- [ ] Check everything inside `@root` before stow (security check)
 
 *more things will be added as they come to my mind or suggested.*

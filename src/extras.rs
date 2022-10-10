@@ -14,6 +14,8 @@ pub fn create_symlink(original: &PathBuf, destination: &PathBuf, options: &Optio
     symlink path:       {}"#, original.to_string_lossy(), destination.to_string_lossy());
     }
 
+    if options.simulate { return true; }
+
     if let Err(why) = unix::fs::symlink(original, destination) {
         match why.kind() {
             ErrorKind::PermissionDenied => {
@@ -62,6 +64,8 @@ pub fn remove_symlink(path: &PathBuf, options: &Options) -> bool {
     symlink path: {}"#, path.to_string_lossy());
     }
 
+    if options.simulate { return true; }
+
     if let Err(why) = fs::remove_file(path) {
         match why.kind() {
             ErrorKind::PermissionDenied => {
@@ -99,6 +103,8 @@ pub fn create_dir(path: &PathBuf, options: &Options) -> bool {
         println!(r#"CREATE DIRECTORY:
     directory path: {}"#, path.to_string_lossy());
     }
+
+    if options.simulate { return true; }
 
     if let Err(why) = fs::create_dir_all(path) {
         match why.kind() {
@@ -148,6 +154,8 @@ pub fn remove_dir(path: &PathBuf, options: &Options) -> bool {
     directory path: {}"#, path.to_string_lossy());
     }
 
+    if options.simulate { return true; }
+
     if let Err(why) = fs::remove_dir_all(path) {
         match why.kind() {
             ErrorKind::PermissionDenied => {
@@ -190,6 +198,8 @@ pub fn remove_file(path: &PathBuf, options: &Options) -> bool {
         println!(r#"REMOVE FILE:
     file path: {}"#, path.to_string_lossy());
     }
+
+    if options.simulate { return true; }
 
     if let Err(why) = fs::remove_file(path) {
         match why.kind() {
