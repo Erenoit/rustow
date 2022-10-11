@@ -5,7 +5,7 @@ mod test;
 
 use crate::extras::*;
 use crate::options::Options;
-use std::{env, fs::{self, DirEntry}, path::PathBuf, process};
+use std::{env, fs::{self, DirEntry}, path::{Path, PathBuf}, process};
 
 // TODO: make --simulate keeo trck of changes so it will generate more real outcome
 
@@ -13,31 +13,23 @@ fn main() {
     let mut options = Options::default();
     let (stow_l, unstow_l, restow_l, adopt_l) = handle_cmd_arguments(&mut options);
 
-    if unstow_l.len() > 0 {
-        for directory in unstow_l {
-            unstow_all_inside_dir(&directory, &options.target_dir, options.special_keywords, &options);
-        }
-    }
+    unstow_l.iter().for_each(|directory| {
+        unstow_all_inside_dir(directory, &options.target_dir, options.special_keywords, &options);
+    });
 
-    if restow_l.len() > 0 {
-        for directory in restow_l {
-            unstow_all_inside_dir(&directory, &options.target_dir, options.special_keywords, &options);
-            stow_all_inside_dir(&directory, &options.target_dir, options.special_keywords, &options);
-        }
-    }
+    restow_l.iter().for_each(|directory| {
+        unstow_all_inside_dir(directory, &options.target_dir, options.special_keywords, &options);
+        stow_all_inside_dir(directory, &options.target_dir, options.special_keywords, &options);
+    });
 
-    if stow_l.len() > 0 {
-        for directory in stow_l {
-            stow_all_inside_dir(&directory, &options.target_dir, options.special_keywords, &options);
-        }
-    }
+    stow_l.iter().for_each(|directory| {
+        stow_all_inside_dir(directory, &options.target_dir, options.special_keywords, &options);
+    });
 
-    if adopt_l.len() > 0 {
-        for directory in adopt_l {
-            adopt_all_inside_dir(&directory, &options.target_dir, options.special_keywords, &options);
-            stow_all_inside_dir(&directory, &options.target_dir, options.special_keywords, &options);
-        }
-    }
+    adopt_l.iter().for_each(|directory| {
+        adopt_all_inside_dir(directory, &options.target_dir, options.special_keywords, &options);
+        stow_all_inside_dir(directory, &options.target_dir, options.special_keywords, &options);
+    });
 }
 
 /*
@@ -64,7 +56,7 @@ fn handle_cmd_arguments(options: &mut Options) -> (Vec<PathBuf>, Vec<PathBuf>, V
             None => break 'args_loop
         };
 
-        if argument.starts_with("-") {
+        if argument.starts_with('-') {
             match &argument[..] {
                 "-S" => push_mode = PushMode::Stow,
                 "-D" => push_mode = PushMode::Unstow,
@@ -156,7 +148,7 @@ fn handle_cmd_arguments(options: &mut Options) -> (Vec<PathBuf>, Vec<PathBuf>, V
             ftype.unwrap().is_dir()
         })
         .filter(|e| {                     // Remove files starts with dot
-            !e.file_name().to_string_lossy().starts_with(".")
+            !e.file_name().to_string_lossy().starts_with('.')
         })
         .collect::<Vec<_>>();
 
@@ -165,7 +157,7 @@ fn handle_cmd_arguments(options: &mut Options) -> (Vec<PathBuf>, Vec<PathBuf>, V
         validate_directories(&str_restow, &mut restow_l, &directories);
         validate_directories(&str_adopt,  &mut adopt_l,  &directories);
 
-    return (stow_l, unstow_l, restow_l, adopt_l)  ;
+    (stow_l, unstow_l, restow_l, adopt_l)
 }
 
 /*
@@ -204,16 +196,16 @@ fn validate_directories(str_vec: &Vec<String>, target_vec: &mut Vec<PathBuf>, va
  * if there is already a file, asks the user if user wants to remove existing one and stow or cancel
  * otherwise creates symlink
  */
-fn stow(original: &PathBuf, destination: &PathBuf, use_special_paths: bool, options: &Options) {
+fn stow(original: &Path, destination: &Path, use_special_paths: bool, options: &Options) {
     let new_dest = if use_special_paths { handle_special_path(original, destination, options) }
-                   else { destination.clone() };
+                   else { destination.to_path_buf() };
 
     let fname = get_name(&new_dest);
 
     if new_dest.is_symlink() {
         if new_dest.is_dir() {
             if let Ok(real_dest) = fs::canonicalize(&new_dest) {
-                if &real_dest == original {
+                if real_dest == original {
                     if options.verbose {
                         println!("{fname} is already stowed. Skipping...");
                     }
@@ -260,7 +252,7 @@ fn stow(original: &PathBuf, destination: &PathBuf, use_special_paths: bool, opti
 /*
  * iterates over everything inside a directory and stows it
  */
-fn stow_all_inside_dir(original: &PathBuf, destination: &PathBuf, use_special_paths: bool, options: &Options) {
+fn stow_all_inside_dir(original: &Path, destination: &Path, use_special_paths: bool, options: &Options) {
     let fname = get_name(destination);
 
     let subdirs = fs::read_dir(original);
@@ -271,7 +263,7 @@ fn stow_all_inside_dir(original: &PathBuf, destination: &PathBuf, use_special_pa
         return;
     }
 
-    let mut write_location = destination.clone();
+    let mut write_location = destination.to_path_buf();
     subdirs.unwrap()
         .filter(|e| { e.is_ok() })
         .map(|e| { e.unwrap() })
@@ -287,9 +279,9 @@ fn stow_all_inside_dir(original: &PathBuf, destination: &PathBuf, use_special_pa
  * if there is a directory, try to unstow things inside the folder
  * if thete is a file, prompts error and skips
  */
-fn unstow(original: &PathBuf, target: &PathBuf, use_special_paths: bool, options: &Options) {
+fn unstow(original: &Path, target: &Path, use_special_paths: bool, options: &Options) {
     let new_target = if use_special_paths { handle_special_path(original, target, options) }
-                   else { target.clone() };
+                   else { target.to_path_buf() };
 
     let fname = get_name(&new_target);
 
@@ -302,12 +294,10 @@ fn unstow(original: &PathBuf, target: &PathBuf, use_special_paths: bool, options
 
     if new_target.is_symlink() {
         remove_symlink(&new_target, options);
-    } else {
-        if new_target.is_dir() && original.is_dir() {
-            unstow_all_inside_dir(original, &new_target, false, options);
-        } else if options.verbose {
-            println!("{fname} exists but it is not a symlink. Skipping...");
-        }
+    } else if new_target.is_dir() && original.is_dir() {
+        unstow_all_inside_dir(original, &new_target, false, options);
+    } else if options.verbose {
+        println!("{fname} exists but it is not a symlink. Skipping...");
     }
 }
 
@@ -315,7 +305,7 @@ fn unstow(original: &PathBuf, target: &PathBuf, use_special_paths: bool, options
  * iterates over everything inside a directory and unstows it
  * if the directory becomes empty, deletes the directory
  */
-fn unstow_all_inside_dir(original: &PathBuf, target: &PathBuf, use_special_paths: bool, options: &Options) {
+fn unstow_all_inside_dir(original: &Path, target: &Path, use_special_paths: bool, options: &Options) {
     let fname = get_name(target);
 
     let subdirs = fs::read_dir(original);
@@ -326,7 +316,7 @@ fn unstow_all_inside_dir(original: &PathBuf, target: &PathBuf, use_special_paths
         return;
     }
 
-    let mut write_location = target.clone();
+    let mut write_location = target.to_path_buf();
     subdirs.unwrap()
         .filter(|e| { e.is_ok() })
         .map(|e| { e.unwrap() })
@@ -350,9 +340,9 @@ fn unstow_all_inside_dir(original: &PathBuf, target: &PathBuf, use_special_paths
  * even though original and target variables should be reversed for logical reasons, it kept same
  * for consistency
  */
-fn adopt(original: &PathBuf, target: &PathBuf, use_special_paths: bool, options: &Options) {
+fn adopt(original: &Path, target: &Path, use_special_paths: bool, options: &Options) {
     let new_target = if use_special_paths { handle_special_path(original, target, options) }
-                   else { target.clone() };
+                   else { target.to_path_buf() };
 
     let fname = get_name(&new_target);
 
@@ -366,7 +356,7 @@ fn adopt(original: &PathBuf, target: &PathBuf, use_special_paths: bool, options:
     if new_target.is_dir() && target.is_dir() {
         adopt_all_inside_dir(original, &new_target, false, options);
     } else if new_target.is_file() && target.is_file() {
-        let mut backup_path = original.clone();
+        let mut backup_path = original.to_path_buf();
         backup_path.pop();
         backup_path.push(format!("{fname}_backup"));
 
@@ -386,7 +376,7 @@ fn adopt(original: &PathBuf, target: &PathBuf, use_special_paths: bool, options:
 /*
  * iterates over everything inside a directory and sends everything to adopt()
  */
-fn adopt_all_inside_dir(original: &PathBuf, target: &PathBuf, use_special_paths: bool, options: &Options) {
+fn adopt_all_inside_dir(original: &Path, target: &Path, use_special_paths: bool, options: &Options) {
     let fname = get_name(target);
 
     let subdirs = fs::read_dir(original);
@@ -397,7 +387,7 @@ fn adopt_all_inside_dir(original: &PathBuf, target: &PathBuf, use_special_paths:
         return;
     }
 
-    let mut write_location = target.clone();
+    let mut write_location = target.to_path_buf();
     subdirs.unwrap()
         .filter(|e| { e.is_ok() })
         .map(|e| { e.unwrap() })
@@ -449,8 +439,8 @@ Options:
  * If it is special path, returns special path
  * Otherwise returns same path
  */
-fn handle_special_path(original: &PathBuf, destination: &PathBuf, options: &Options) -> PathBuf {
-    if !options.special_keywords { return destination.clone(); }
+fn handle_special_path(original: &Path, destination: &Path, options: &Options) -> PathBuf {
+    if !options.special_keywords { return destination.to_path_buf(); }
 
     let name = get_name(destination);
     match name.as_ref() {
@@ -460,7 +450,7 @@ fn handle_special_path(original: &PathBuf, destination: &PathBuf, options: &Opti
                     let p = PathBuf::from(path);
 
                     if p.exists() {
-                        return p;
+                        p
                     } else {
                         println!("Couldn't find HOME variable.");
                         process::exit(1);
@@ -474,7 +464,7 @@ fn handle_special_path(original: &PathBuf, destination: &PathBuf, options: &Opti
         }
         "@root" => {
             if !options.security_check || is_root_file(original) {
-                return PathBuf::from("/");
+                PathBuf::from("/")
             } else {
                 println!(r#"
 For security reasons, all the files/folders including and followed by @root file must be owned by root.
@@ -487,7 +477,7 @@ Use --no-security-check flag to prevent from this error
                 process::exit(1);
             }
         }
-        _ => destination.clone()
+        _ => destination.to_path_buf()
     }
 }
 

@@ -1,13 +1,13 @@
 use crate::options::Options;
 use std::{
-    borrow::Cow, fs, io::{self, Write, ErrorKind}, path::PathBuf,
+    borrow::Cow, fs, io::{self, Write, ErrorKind}, path::Path,
     os::unix::{self, fs::MetadataExt}
 };
 
 // TODO: When "io_error_more" becomes stable chaeck for commented errors as well
 
 #[inline(always)]
-pub fn create_symlink(original: &PathBuf, destination: &PathBuf, options: &Options) -> bool {
+pub fn create_symlink(original: &Path, destination: &Path, options: &Options) -> bool {
     if options.verbose {
         println!(r#"CREATE SYMLINK:
     original file path: {}
@@ -54,11 +54,11 @@ pub fn create_symlink(original: &PathBuf, destination: &PathBuf, options: &Optio
         return false;
     }
 
-    return true;
+    true
 }
 
 #[inline(always)]
-pub fn remove_symlink(path: &PathBuf, options: &Options) -> bool {
+pub fn remove_symlink(path: &Path, options: &Options) -> bool {
     if options.verbose {
         println!(r#"REMOVE SYMLINK:
     symlink path: {}"#, path.to_string_lossy());
@@ -94,11 +94,11 @@ pub fn remove_symlink(path: &PathBuf, options: &Options) -> bool {
         return false;
     }
 
-    return true;
+    true
 }
 
 #[inline(always)]
-pub fn create_dir(path: &PathBuf, options: &Options) -> bool {
+pub fn create_dir(path: &Path, options: &Options) -> bool {
     if options.verbose {
         println!(r#"CREATE DIRECTORY:
     directory path: {}"#, path.to_string_lossy());
@@ -144,11 +144,11 @@ pub fn create_dir(path: &PathBuf, options: &Options) -> bool {
         return false;
     }
 
-    return true;
+    true
 }
 
 #[inline(always)]
-pub fn remove_dir(path: &PathBuf, options: &Options) -> bool {
+pub fn remove_dir(path: &Path, options: &Options) -> bool {
     if options.verbose {
         println!(r#"REMOVE DIRECTORY:
     directory path: {}"#, path.to_string_lossy());
@@ -189,11 +189,11 @@ pub fn remove_dir(path: &PathBuf, options: &Options) -> bool {
         return false;
     }
 
-    return true;
+    true
 }
 
 #[inline(always)]
-pub fn remove_file(path: &PathBuf, options: &Options) -> bool {
+pub fn remove_file(path: &Path, options: &Options) -> bool {
     if options.verbose {
         println!(r#"REMOVE FILE:
     file path: {}"#, path.to_string_lossy());
@@ -229,14 +229,14 @@ pub fn remove_file(path: &PathBuf, options: &Options) -> bool {
         return false;
     }
 
-    return true;
+    true
 }
 
 /*
  * Tries to rename file, if it fails tries to copy file and then remove old one if copy successes
  */
 #[inline(always)]
-pub fn move_file(from: &PathBuf, to: &PathBuf, options: &Options) -> bool {
+pub fn move_file(from: &Path, to: &Path, options: &Options) -> bool {
     if options.verbose {
         println!(r#"MOVE FILE:
     from: {}
@@ -331,7 +331,7 @@ pub fn move_file(from: &PathBuf, to: &PathBuf, options: &Options) -> bool {
         }
     }
 
-    return true;
+    true
 }
 
 #[inline(always)]
@@ -350,7 +350,7 @@ If you saw this message please report to 'https://gitlab.com/Erenoit/rustow' wit
  * if path is "/", it returns "filesystem root"
  */
 #[inline(always)]
-pub fn get_name(path: &PathBuf) -> Cow<'_, str> {
+pub fn get_name(path: &Path) -> Cow<'_, str> {
     if let Some(name) = path.file_name() {
         name.to_string_lossy()
     } else {
@@ -376,7 +376,7 @@ pub fn prompt(message: String, is_yes_default: bool) -> bool {
     }
     let answer = buffer.trim().to_lowercase();
 
-    return (is_yes_default && answer == "") || answer == "y" || answer == "yes";
+    (is_yes_default && answer.is_empty()) || answer == "y" || answer == "yes"
 }
 
 /*
@@ -384,19 +384,23 @@ pub fn prompt(message: String, is_yes_default: bool) -> bool {
  * On error return false
  */
 #[inline(always)]
-pub fn is_root_file(path: &PathBuf) -> bool {
-    match dbg!(path).metadata() {
+pub fn is_root_file(path: &Path) -> bool {
+    match path.metadata() {
         Ok(metadata) => {
-            if dbg!(metadata.uid()) == 0 {
-                // TODO: Also check for child files and write permissions
-                return true;
+            if metadata.uid() == 0 {
+                if path.is_dir() {
+                    // TODO: recersive call
+                    todo!()
+                } else {
+                    true
+                }
             } else {
-                return false;
+                false
             }
         }
         Err(why) => {
             dbg!("failed in metadata {}", why);
-            return false;
+            false
         }
     }
 }

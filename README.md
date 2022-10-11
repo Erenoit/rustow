@@ -37,5 +37,7 @@ $ cargo build --release
 - [x] `--no-security-check` flag
 - [x] `--simulate` flag
 - [ ] Check everything inside `@root` before stow (security check)
+- [ ] Add man page
+- [ ] Add `PKGBUILD` for [AUR](aur.archlinux.org/)
 
 *more things will be added as they come to my mind or suggested.*
