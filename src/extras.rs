@@ -389,8 +389,18 @@ pub fn is_root_file(path: &Path) -> bool {
         Ok(metadata) => {
             if metadata.uid() == 0 {
                 if path.is_dir() {
-                    // TODO: recersive call
-                    todo!()
+                    let subdirs = fs::read_dir(path);
+                    if subdirs.is_err() { 
+                        return false;
+                    }
+
+                    for element in subdirs.unwrap().filter(|e| { e.is_ok() }).map(|e| { e.unwrap() }) {
+                        if !is_root_file(&element.path()) {
+                            return false;
+                        }
+                    }
+
+                    true
                 } else {
                     true
                 }
