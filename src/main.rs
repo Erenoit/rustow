@@ -403,7 +403,7 @@ fn adopt_all_inside_dir(original: &Path, target: &Path, use_special_paths: bool,
  */
 #[inline(always)]
 fn print_version() {
-    println!("rustow version 0.4-beta");
+    println!("rustow version {}", env!("CARGO_PKG_VERSION"));
 }
 
 /*
