@@ -1,7 +1,26 @@
 # Rustow
-Rustow is [GNU Stow](https://www.gnu.org/software/stow/) rewritten in [Rust](https://www.rust-lang.org/). It is neither future complete nor production ready at this point. **USE WITH CAUTION!**
+Rustow is [GNU Stow](https://www.gnu.org/software/stow/) rewritten in [Rust](https://www.rust-lang.org/). It may have some bugs. **USE WITH CAUTION!**
 
 ## Installation
+
+### Arch Linux
+Rustow is available in [AUR](aur.archlinux.org/) as [rustow-git](https://aur.archlinux.org/packages/rustow-git). Use your favorite AUR Helper to install.
+Examples:
+
+- [Aura](https://github.com/fosskers/aura)
+
+```sh
+$ aura -A rustow-git
+```
+
+- [Yay](https://github.com/Jguer/yay)
+
+```sh
+$ yay -S rustow-git
+```
+
+### Others
+Rustow is not in any official repository (as far as I know). So, you should build it from source.
 1. Clone this repository:
 
 ```sh
@@ -38,6 +57,7 @@ $ cargo build --release
 - [x] `--simulate` flag
 - [x] Check everything inside `@root` before stow (security check)
 - [ ] Add man page
-- [ ] Add `PKGBUILD` for [AUR](aur.archlinux.org/)
+- [x] Add `PKGBUILD` for [AUR](aur.archlinux.org/)
+- [x] Upload package to [AUR](aur.archlinux.org/)
 
 *more things will be added as they come to my mind or suggested.*
