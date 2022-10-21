@@ -1,0 +1,103 @@
+.TH Rustow "1" "October 2022" "User Commands"
+
+.SH NAME
+.B rustow
+- manage farms of symbolic links
+
+.SH SYNOPSIS
+.B rustow
+\fR[\fI\,OPTION...\/\fR]
+\fR[\fI\,-S\/\fR|\fI\,-D\/\fR|\fI\,-R\/\fR|\fI\,-A\/\fR]
+\fI\,PACKAGE PACKAGE\/\fR ...
+\fR[\fI\,-S\/\fR|\fI\,-D\/\fR|\fI\,-R\/\fR|\fI\,-A\/\fR]
+\fI\,PACKAGE\/\fR ...
+
+.SH DESCRIPTION
+.PP
+Rustow is a symlink farm manager which takes distinct sets of software
+and/or data located in separate directories on the filesystem, and
+makes them all appear to be installed in a single directory tree.
+It originally started as personal learning project with rewriting GNU Stow in Rust,
+but Rustow has some extra features like special directory names for special paths.
+.PP
+Rustow stores no extra state between runs, so there's no danger
+of mangling directories when file hierarchies don't match the database.
+Rustow will never delete any files, directories, or links that appear in
+a Stow directory, so it's always possible to rebuild the target tree.
+
+.SH OPERATIONS
+.TP
+.BR \-S " \fI\,PACKAGE(S)\/\fR"
+Stow the package(s).
+.IP
+Creates symlinks of files in the package(s) to target directory.
+.TP
+.BR \-D " \fI\,PACKAGE(S)\/\fR"
+Unstow the package(s).
+.IP
+Removes existing symlinks of files in the package in target directory.
+.TP
+.BR \-R " \fI\,PACKAGE(S)\/\fR"
+Restow the package(s).
+.IP
+Same as unstowing and then stowing a package(s).
+.TP
+.BR \-A " \fI\,PACKAGE(S)\/\fR"
+Adopt the package(s).
+.IP
+Imports existing files in target directory to stow package.
+.IP
+It replaces the file on the stow directory with the one which has the same name from target directory, then runs stow on it. USE WITH CAUTION!
+
+.SH ARGUMENTS
+.TP
+.BR \-h ", " \-\-help
+Print help message and exit.
+.TP
+.BR \-V ", " \-\-version
+Print version info and exit.
+.TP
+.BR \-d ", " \-\-stow\-dir " \fI\,DIR\/\fR"
+Set stow dir to DIR (default is current dir).
+.TP
+.BR \-t ", " \-\-target\-dir " \fI\,DIR\/\fR"
+Set target dir to DIR (default is parent of stow dir).
+.TP
+.BR \-v ", " \-\-verbose
+Print whats being done to stdout.
+.TP
+.BR \-s ", " \-\-simulate
+Print what will be done to stdout, but do not make any changes to filesystem.
+.TP
+.BR \-\-no\-special\-keywords
+Disables special keywords while (un)stowing.
+.TP
+.BR \-\-no\-security\-check
+Disables security check for \fI\,@root\/\fR.
+
+.SH SPECIAL FOLDER NAMES
+This folder names change target directory only for files inside it. This only works if the directory
+which has the special name is on the root of the stow package.
+.TP
+.BR @home
+Changes target directory to $HOME variable only for items in this directory tree.
+.TP
+.BR @root
+Changes target directory to root of the filesystem only for items in this directory tree.
+
+.SH AUTHOR
+Written by Eren Önen.
+
+.SH COPYRIGHT
+Copyright \(co 2022 Eren Önen and Contributors
+License GPLv3+: GNU GPL version 3 or later <https://gnu.org/licenses/gpl.html>.
+.br
+This is free software: you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.
+
+.SH REPORTING BUGS
+Project git repository: <www.gitlab.com/Erenoit/rustow>
+
+.SH SEE ALSO
+\fBstow\fP(8)
+

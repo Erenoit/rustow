@@ -33,7 +33,13 @@ $ git clone https://gitlab.com/Erenoit/rustow.git
 $ cargo build --release
 ```
 
-3. Move executable (`target/release/rustow`) somewhere in your `$PATH`
+3. Move executable (`target/release/rustow`) somewhere in your `$PATH`:
+
+```sh
+$ install -Dm755 target/release/rustow /usr/bin/rustow
+$ install -Dm644 LICENSE /usr/share/licenses/rustow/LICENSE
+$ install -Dm644 rustow.1 /usr/share/man/man1/rustow.1
+```
 
 ## TODO
 - [x] Basic functionality
@@ -56,8 +62,9 @@ $ cargo build --release
 - [x] `--no-security-check` flag
 - [x] `--simulate` flag
 - [x] Check everything inside `@root` before stow (security check)
-- [ ] Add man page
+- [x] Add man page
 - [x] Add `PKGBUILD` for [AUR](aur.archlinux.org/)
 - [x] Upload package to [AUR](aur.archlinux.org/)
+- [ ] TUI application
 
 *more things will be added as they come to my mind or suggested.*
