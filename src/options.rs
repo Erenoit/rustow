@@ -1,12 +1,13 @@
 use std::{env, path::PathBuf};
 
 pub struct Options {
-    pub stow_dir: PathBuf,
-    pub target_dir: PathBuf,
-    pub special_keywords: bool,
-    pub security_check: bool,
-    pub verbose: bool,
-    pub simulate: bool,
+    pub stow_dir:                 PathBuf,
+    pub target_dir:               PathBuf,
+    pub special_keywords:         bool,
+    pub security_check:           bool,
+    pub verbose:                  bool,
+    pub simulate:                 bool,
+    pub simulate_change_histoory: Vec<FileType>,
 }
 
 impl Options {
@@ -16,12 +17,18 @@ impl Options {
         parent_dir.pop();
 
         Self {
-            stow_dir: working_dir,
-            target_dir: parent_dir,
-            special_keywords: true,
-            security_check: true,
-            verbose: false,
-            simulate: false,
+            stow_dir:                 working_dir,
+            target_dir:               parent_dir,
+            special_keywords:         true,
+            security_check:           true,
+            verbose:                  false,
+            simulate:                 false,
+            simulate_change_histoory: Vec::with_capacity(128),
         }
     }
+}
+
+pub enum FileType {
+    Symlink(String),
+    Directory(String),
 }

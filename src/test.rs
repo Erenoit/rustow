@@ -1,37 +1,38 @@
-use super::*;
 use std::io;
 
-/*
- * Unit tests module
- * TEST_NO is used for creating unique directory for each test
- * This allows us to run tusts in parallel
- * Every test name briefly describes what it tests
- */
+use super::*;
+
+// Unit tests module
+// TEST_NO is used for creating unique directory for each test
+// This allows us to run tusts in parallel
+// Every test name briefly describes what it tests
 
 fn ready_test(test_no: u8) {
     let mut working_dir = env::current_dir().expect("Working directory couldn't found.");
     working_dir.push(format!("test_temp_file_{test_no}"));
 
     match fs::create_dir(&working_dir) {
-        Ok(_) => {}
-        Err(e) => {
+        Ok(_) => {},
+        Err(e) =>
             match e.kind() {
                 io::ErrorKind::AlreadyExists => {
                     clean_test(test_no);
                     fs::create_dir(&working_dir).expect("Couldn't create test directory.");
-                }
-                _ => {panic!("Couldn't create test directory. {e}")}
-            }
-        }
+                },
+                _ => {
+                    panic!("Couldn't create test directory. {e}")
+                },
+            },
     }
 
     working_dir.push("stow_dir");
     fs::create_dir(&working_dir).expect("Couldn't create stow directory.");
 
     working_dir.pop();
-    let inside = fs::read_dir(working_dir).expect("Couldn't read test directory.")
-        .filter(|e| { e.is_ok() })
-        .map(|e| { e.unwrap() })
+    let inside = fs::read_dir(working_dir)
+        .expect("Couldn't read test directory.")
+        .filter(|e| e.is_ok())
+        .map(|e| e.unwrap())
         .collect::<Vec<_>>();
 
     assert_eq!(inside.len(), 1);
@@ -43,13 +44,14 @@ fn clean_test(test_no: u8) {
     working_dir.push(format!("test_temp_file_{test_no}"));
 
     match fs::remove_dir_all(working_dir) {
-        Ok(_) => {}
-        Err(e) => {
+        Ok(_) => {},
+        Err(e) =>
             match e.kind() {
-                io::ErrorKind::NotFound => {}
-                _ => {panic!("Couldn't remove test directory. {e}")}
-            }
-        }
+                io::ErrorKind::NotFound => {},
+                _ => {
+                    panic!("Couldn't remove test directory. {e}")
+                },
+            },
     }
 }
 
@@ -116,7 +118,6 @@ fn basic_stow_file() {
 
     create_environment(&working_dir);
 
-
     let mut file_path = working_dir.clone();
     file_path.push("stow_dir");
     file_path.push("stow1");
@@ -124,23 +125,26 @@ fn basic_stow_file() {
 
     working_dir.push("file_in_target_root");
 
-    stow(&file_path, &working_dir, false, &Options::default());
+    stow(
+        &file_path,
+        &working_dir,
+        false,
+        &Options::default(),
+    );
 
     working_dir.pop();
-
 
     let mut directories_after = fs::read_dir(&working_dir)
         .expect("Couldn't read working directory.")
         .filter(|e| { e.is_ok() })        // Remove errors
         .map(|e| { e.unwrap() })
         .collect::<Vec<_>>();
-    directories_after.sort_by(|a, b| { a.file_name().cmp(&b.file_name()) });
+    directories_after.sort_by(|a, b| a.file_name().cmp(&b.file_name()));
 
-    assert_eq!(directories_after.len(), 3) ;
+    assert_eq!(directories_after.len(), 3);
     assert!(!directories_after[0].path().is_symlink());
-    assert!( directories_after[1].path().is_symlink());
+    assert!(directories_after[1].path().is_symlink());
     assert!(!directories_after[2].path().is_symlink());
-
 
     clean_test(TEST_NO);
 }
@@ -156,7 +160,6 @@ fn basic_stow_folder() {
 
     create_environment(&working_dir);
 
-
     let mut file_path = working_dir.clone();
     file_path.push("stow_dir");
     file_path.push("stow2");
@@ -164,23 +167,26 @@ fn basic_stow_folder() {
 
     working_dir.push("another_directory");
 
-    stow(&file_path, &working_dir, false, &Options::default());
+    stow(
+        &file_path,
+        &working_dir,
+        false,
+        &Options::default(),
+    );
 
     working_dir.pop();
-
 
     let mut directories_after = fs::read_dir(&working_dir)
         .expect("Couldn't read working directory.")
         .filter(|e| { e.is_ok() })        // Remove errors
         .map(|e| { e.unwrap() })
         .collect::<Vec<_>>();
-    directories_after.sort_by(|a, b| { a.file_name().cmp(&b.file_name()) });
+    directories_after.sort_by(|a, b| a.file_name().cmp(&b.file_name()));
 
-    assert_eq!(directories_after.len(), 3) ;
-    assert!( directories_after[0].path().is_symlink());
+    assert_eq!(directories_after.len(), 3);
+    assert!(directories_after[0].path().is_symlink());
     assert!(!directories_after[1].path().is_symlink());
     assert!(!directories_after[2].path().is_symlink());
-
 
     clean_test(TEST_NO);
 }
@@ -196,7 +202,6 @@ fn basic_stow_w_parent_directory_exits() {
 
     create_environment(&working_dir);
 
-
     let mut file_path = working_dir.clone();
     file_path.push("stow_dir");
     file_path.push("stow1");
@@ -204,19 +209,23 @@ fn basic_stow_w_parent_directory_exits() {
 
     working_dir.push("existing_directory");
 
-    stow(&file_path, &working_dir, false, &Options::default());
+    stow(
+        &file_path,
+        &working_dir,
+        false,
+        &Options::default(),
+    );
 
     working_dir.pop();
-
 
     let mut directories_after = fs::read_dir(&working_dir)
         .expect("Couldn't read working directory.")
         .filter(|e| { e.is_ok() })        // Remove errors
         .map(|e| { e.unwrap() })
         .collect::<Vec<_>>();
-    directories_after.sort_by(|a, b| { a.file_name().cmp(&b.file_name()) });
+    directories_after.sort_by(|a, b| a.file_name().cmp(&b.file_name()));
 
-    assert_eq!(directories_after.len(), 2) ;
+    assert_eq!(directories_after.len(), 2);
     assert!(!directories_after[0].path().is_symlink());
     assert!(!directories_after[1].path().is_symlink());
 
@@ -227,9 +236,8 @@ fn basic_stow_w_parent_directory_exits() {
         .map(|e| { e.unwrap() })
         .collect::<Vec<_>>();
 
-    assert_eq!(inside_existing_dir.len(), 1) ;
+    assert_eq!(inside_existing_dir.len(), 1);
     assert!(inside_existing_dir[0].path().is_symlink());
-
 
     clean_test(TEST_NO);
 }
@@ -244,7 +252,6 @@ fn full_stow() {
     working_dir.push(format!("test_temp_file_{TEST_NO}"));
 
     create_environment(&working_dir);
-
 
     working_dir.push("stow_dir");
     let directories = fs::read_dir(&working_dir)
@@ -264,21 +271,25 @@ fn full_stow() {
 
     working_dir.pop();
     for dir in directories {
-        stow_all_inside_dir(&dir.path(), &working_dir, true, &Options::default());
+        stow_all_inside_dir(
+            &dir.path(),
+            &working_dir,
+            true,
+            &Options::default(),
+        );
     }
-
 
     let mut directories_after = fs::read_dir(&working_dir)
         .expect("Couldn't read working directory.")
         .filter(|e| { e.is_ok() })        // Remove errors
         .map(|e| { e.unwrap() })
         .collect::<Vec<_>>();
-    directories_after.sort_by(|a, b| { a.file_name().cmp(&b.file_name()) });
+    directories_after.sort_by(|a, b| a.file_name().cmp(&b.file_name()));
 
-    assert_eq!(directories_after.len(), 4) ;
+    assert_eq!(directories_after.len(), 4);
     assert!(!directories_after[0].path().is_symlink());
     assert!(!directories_after[1].path().is_symlink());
-    assert!( directories_after[2].path().is_symlink());
+    assert!(directories_after[2].path().is_symlink());
     assert!(!directories_after[3].path().is_symlink());
 
     working_dir.push("existing_directory");
@@ -291,7 +302,6 @@ fn full_stow() {
     assert_eq!(inside_existing_dir.len(), 2);
     assert!(inside_existing_dir[0].path().is_symlink());
     assert!(inside_existing_dir[1].path().is_symlink());
-
 
     clean_test(TEST_NO);
 }
@@ -314,7 +324,12 @@ fn basic_unstow_file() {
 
     working_dir.push("file_in_target_root");
 
-    stow(&file_path, &working_dir, false, &Options::default());
+    stow(
+        &file_path,
+        &working_dir,
+        false,
+        &Options::default(),
+    );
 
     working_dir.pop();
 
@@ -323,32 +338,34 @@ fn basic_unstow_file() {
         .filter(|e| { e.is_ok() })        // Remove errors
         .map(|e| { e.unwrap() })
         .collect::<Vec<_>>();
-    directories_after.sort_by(|a, b| { a.file_name().cmp(&b.file_name()) });
+    directories_after.sort_by(|a, b| a.file_name().cmp(&b.file_name()));
 
-    assert_eq!(directories_after.len(), 3) ;
+    assert_eq!(directories_after.len(), 3);
     assert!(!directories_after[0].path().is_symlink());
-    assert!( directories_after[1].path().is_symlink());
+    assert!(directories_after[1].path().is_symlink());
     assert!(!directories_after[2].path().is_symlink());
-
 
     working_dir.push("file_in_target_root");
 
-    unstow(&file_path, &working_dir, true, &Options::default());
+    unstow(
+        &file_path,
+        &working_dir,
+        true,
+        &Options::default(),
+    );
 
     working_dir.pop();
-
 
     let mut directories_after = fs::read_dir(&working_dir)
         .expect("Couldn't read working directory.")
         .filter(|e| { e.is_ok() })        // Remove errors
         .map(|e| { e.unwrap() })
         .collect::<Vec<_>>();
-    directories_after.sort_by(|a, b| { a.file_name().cmp(&b.file_name()) });
+    directories_after.sort_by(|a, b| a.file_name().cmp(&b.file_name()));
 
-    assert_eq!(directories_after.len(), 2) ;
+    assert_eq!(directories_after.len(), 2);
     assert!(!directories_after[0].path().is_symlink());
     assert!(!directories_after[1].path().is_symlink());
-
 
     clean_test(TEST_NO);
 }
@@ -371,7 +388,12 @@ fn basic_unstow_folder() {
 
     working_dir.push("another_directory");
 
-    stow(&file_path, &working_dir, false, &Options::default());
+    stow(
+        &file_path,
+        &working_dir,
+        false,
+        &Options::default(),
+    );
 
     working_dir.pop();
 
@@ -380,32 +402,34 @@ fn basic_unstow_folder() {
         .filter(|e| { e.is_ok() })        // Remove errors
         .map(|e| { e.unwrap() })
         .collect::<Vec<_>>();
-    directories_after.sort_by(|a, b| { a.file_name().cmp(&b.file_name()) });
+    directories_after.sort_by(|a, b| a.file_name().cmp(&b.file_name()));
 
-    assert_eq!(directories_after.len(), 3) ;
-    assert!( directories_after[0].path().is_symlink());
+    assert_eq!(directories_after.len(), 3);
+    assert!(directories_after[0].path().is_symlink());
     assert!(!directories_after[1].path().is_symlink());
     assert!(!directories_after[2].path().is_symlink());
 
-
     working_dir.push("another_directory");
 
-    unstow(&file_path, &working_dir, true, &Options::default());
+    unstow(
+        &file_path,
+        &working_dir,
+        true,
+        &Options::default(),
+    );
 
     working_dir.pop();
-
 
     let mut directories_after = fs::read_dir(&working_dir)
         .expect("Couldn't read working directory.")
         .filter(|e| { e.is_ok() })        // Remove errors
         .map(|e| { e.unwrap() })
         .collect::<Vec<_>>();
-    directories_after.sort_by(|a, b| { a.file_name().cmp(&b.file_name()) });
+    directories_after.sort_by(|a, b| a.file_name().cmp(&b.file_name()));
 
-    assert_eq!(directories_after.len(), 2) ;
+    assert_eq!(directories_after.len(), 2);
     assert!(!directories_after[0].path().is_symlink());
     assert!(!directories_after[1].path().is_symlink());
-
 
     clean_test(TEST_NO);
 }
@@ -428,7 +452,12 @@ fn basic_unstow_w_parent_directory_exits() {
 
     working_dir.push("existing_directory");
 
-    stow(&file_path, &working_dir, false, &Options::default());
+    stow(
+        &file_path,
+        &working_dir,
+        false,
+        &Options::default(),
+    );
 
     working_dir.pop();
 
@@ -437,9 +466,9 @@ fn basic_unstow_w_parent_directory_exits() {
         .filter(|e| { e.is_ok() })        // Remove errors
         .map(|e| { e.unwrap() })
         .collect::<Vec<_>>();
-    directories_after.sort_by(|a, b| { a.file_name().cmp(&b.file_name()) });
+    directories_after.sort_by(|a, b| a.file_name().cmp(&b.file_name()));
 
-    assert_eq!(directories_after.len(), 2) ;
+    assert_eq!(directories_after.len(), 2);
     assert!(!directories_after[0].path().is_symlink());
     assert!(!directories_after[1].path().is_symlink());
 
@@ -450,29 +479,31 @@ fn basic_unstow_w_parent_directory_exits() {
         .map(|e| { e.unwrap() })
         .collect::<Vec<_>>();
 
-    assert_eq!(inside_existing_dir.len(), 1) ;
+    assert_eq!(inside_existing_dir.len(), 1);
     assert!(inside_existing_dir[0].path().is_symlink());
 
     working_dir.pop();
 
-
     working_dir.push("existing_directory");
 
-    unstow(&file_path, &working_dir, true, &Options::default());
+    unstow(
+        &file_path,
+        &working_dir,
+        true,
+        &Options::default(),
+    );
 
     working_dir.pop();
-
 
     let mut directories_after = fs::read_dir(&working_dir)
         .expect("Couldn't read working directory.")
         .filter(|e| { e.is_ok() })        // Remove errors
         .map(|e| { e.unwrap() })
         .collect::<Vec<_>>();
-    directories_after.sort_by(|a, b| { a.file_name().cmp(&b.file_name()) });
+    directories_after.sort_by(|a, b| a.file_name().cmp(&b.file_name()));
 
-    assert_eq!(directories_after.len(), 1) ;
+    assert_eq!(directories_after.len(), 1);
     assert!(!directories_after[0].path().is_symlink());
-
 
     clean_test(TEST_NO);
 }
@@ -506,7 +537,12 @@ fn full_unstow() {
 
     working_dir.pop();
     for dir in directories {
-        stow_all_inside_dir(&dir.path(), &working_dir, true, &Options::default());
+        stow_all_inside_dir(
+            &dir.path(),
+            &working_dir,
+            true,
+            &Options::default(),
+        );
     }
 
     let mut directories_after = fs::read_dir(&working_dir)
@@ -514,12 +550,12 @@ fn full_unstow() {
         .filter(|e| { e.is_ok() })        // Remove errors
         .map(|e| { e.unwrap() })
         .collect::<Vec<_>>();
-    directories_after.sort_by(|a, b| { a.file_name().cmp(&b.file_name()) });
+    directories_after.sort_by(|a, b| a.file_name().cmp(&b.file_name()));
 
-    assert_eq!(directories_after.len(), 4) ;
+    assert_eq!(directories_after.len(), 4);
     assert!(!directories_after[0].path().is_symlink());
     assert!(!directories_after[1].path().is_symlink());
-    assert!( directories_after[2].path().is_symlink());
+    assert!(directories_after[2].path().is_symlink());
     assert!(!directories_after[3].path().is_symlink());
 
     working_dir.push("existing_directory");
@@ -534,7 +570,6 @@ fn full_unstow() {
     assert!(inside_existing_dir[1].path().is_symlink());
 
     working_dir.pop();
-
 
     working_dir.push("stow_dir");
     let directories = fs::read_dir(&working_dir)
@@ -554,21 +589,23 @@ fn full_unstow() {
 
     working_dir.pop();
     for dir in directories {
-        unstow_all_inside_dir(&dir.path(), &working_dir, true, &Options::default());
+        unstow_all_inside_dir(
+            &dir.path(),
+            &working_dir,
+            true,
+            &Options::default(),
+        );
     }
-
 
     let mut directories_after = fs::read_dir(&working_dir)
         .expect("Couldn't read working directory.")
         .filter(|e| { e.is_ok() })        // Remove errors
         .map(|e| { e.unwrap() })
         .collect::<Vec<_>>();
-    directories_after.sort_by(|a, b| { a.file_name().cmp(&b.file_name()) });
+    directories_after.sort_by(|a, b| a.file_name().cmp(&b.file_name()));
 
-    assert_eq!(directories_after.len(), 1) ;
+    assert_eq!(directories_after.len(), 1);
     assert!(!directories_after[0].path().is_symlink());
-
 
     clean_test(TEST_NO);
 }
-
