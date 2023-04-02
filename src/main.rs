@@ -186,8 +186,7 @@ fn handle_cmd_arguments(
 
     let directories = fs::read_dir(&options.stow_dir)
         .expect("Couldn't read working directory.")
-        .filter(|e| e.is_ok()) // Remove errors
-        .map(|e| e.unwrap())
+        .filter_map(|e| e.ok()) // Remove errors
         .filter(|e| {
             // Only take directories
             let ftype = e.file_type();
@@ -327,20 +326,16 @@ fn stow_all_inside_dir(
     }
 
     let mut write_location = destination.to_path_buf();
-    subdirs
-        .unwrap()
-        .filter(|e| e.is_ok())
-        .map(|e| e.unwrap())
-        .for_each(|element| {
-            write_location.push(element.file_name());
-            stow(
-                &element.path(),
-                &write_location,
-                use_special_paths,
-                options,
-            );
-            write_location.pop();
-        });
+    subdirs.unwrap().filter_map(|e| e.ok()).for_each(|element| {
+        write_location.push(element.file_name());
+        stow(
+            &element.path(),
+            &write_location,
+            use_special_paths,
+            options,
+        );
+        write_location.pop();
+    });
 }
 
 // if there is symlink, removes it
@@ -390,20 +385,16 @@ fn unstow_all_inside_dir(
     }
 
     let mut write_location = target.to_path_buf();
-    subdirs
-        .unwrap()
-        .filter(|e| e.is_ok())
-        .map(|e| e.unwrap())
-        .for_each(|element| {
-            write_location.push(element.file_name());
-            unstow(
-                &element.path(),
-                &write_location,
-                use_special_paths,
-                options,
-            );
-            write_location.pop();
-        });
+    subdirs.unwrap().filter_map(|e| e.ok()).for_each(|element| {
+        write_location.push(element.file_name());
+        unstow(
+            &element.path(),
+            &write_location,
+            use_special_paths,
+            options,
+        );
+        write_location.pop();
+    });
 
     if let Ok(mut dir_iterator) = fs::read_dir(target) {
         if dir_iterator.next().is_none() {
@@ -471,20 +462,16 @@ fn adopt_all_inside_dir(
     }
 
     let mut write_location = target.to_path_buf();
-    subdirs
-        .unwrap()
-        .filter(|e| e.is_ok())
-        .map(|e| e.unwrap())
-        .for_each(|element| {
-            write_location.push(element.file_name());
-            adopt(
-                &element.path(),
-                &write_location,
-                use_special_paths,
-                options,
-            );
-            write_location.pop();
-        });
+    subdirs.unwrap().filter_map(|e| e.ok()).for_each(|element| {
+        write_location.push(element.file_name());
+        adopt(
+            &element.path(),
+            &write_location,
+            use_special_paths,
+            options,
+        );
+        write_location.pop();
+    });
 }
 
 // Prints version info

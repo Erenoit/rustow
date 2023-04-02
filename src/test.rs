@@ -31,8 +31,7 @@ fn ready_test(test_no: u8) {
     working_dir.pop();
     let inside = fs::read_dir(working_dir)
         .expect("Couldn't read test directory.")
-        .filter(|e| e.is_ok())
-        .map(|e| e.unwrap())
+        .filter_map(|e| e.ok())
         .collect::<Vec<_>>();
 
     assert_eq!(inside.len(), 1);
@@ -55,8 +54,8 @@ fn clean_test(test_no: u8) {
     }
 }
 
-fn create_environment(directory: &PathBuf) {
-    let mut working_dir = directory.clone();
+fn create_environment(directory: &Path) {
+    let mut working_dir = directory.to_path_buf();
 
     working_dir.push("existing_directory");
     fs::create_dir(&working_dir).expect("Test environment creation failed");
@@ -139,7 +138,7 @@ fn basic_stow_file() {
         .filter(|e| { e.is_ok() })        // Remove errors
         .map(|e| { e.unwrap() })
         .collect::<Vec<_>>();
-    directories_after.sort_by(|a, b| a.file_name().cmp(&b.file_name()));
+    directories_after.sort_by_key(|a| a.file_name());
 
     assert_eq!(directories_after.len(), 3);
     assert!(!directories_after[0].path().is_symlink());
@@ -181,7 +180,7 @@ fn basic_stow_folder() {
         .filter(|e| { e.is_ok() })        // Remove errors
         .map(|e| { e.unwrap() })
         .collect::<Vec<_>>();
-    directories_after.sort_by(|a, b| a.file_name().cmp(&b.file_name()));
+    directories_after.sort_by_key(|a| a.file_name());
 
     assert_eq!(directories_after.len(), 3);
     assert!(directories_after[0].path().is_symlink());
@@ -223,7 +222,7 @@ fn basic_stow_w_parent_directory_exits() {
         .filter(|e| { e.is_ok() })        // Remove errors
         .map(|e| { e.unwrap() })
         .collect::<Vec<_>>();
-    directories_after.sort_by(|a, b| a.file_name().cmp(&b.file_name()));
+    directories_after.sort_by_key(|a| a.file_name());
 
     assert_eq!(directories_after.len(), 2);
     assert!(!directories_after[0].path().is_symlink());
@@ -265,7 +264,7 @@ fn full_stow() {
             ftype.unwrap().is_dir()
         })
         .filter(|e| {                     // Remove files starts with dot
-            !e.file_name().to_string_lossy().starts_with(".")
+            !e.file_name().to_string_lossy().starts_with('.')
         })
         .collect::<Vec<_>>();
 
@@ -284,7 +283,7 @@ fn full_stow() {
         .filter(|e| { e.is_ok() })        // Remove errors
         .map(|e| { e.unwrap() })
         .collect::<Vec<_>>();
-    directories_after.sort_by(|a, b| a.file_name().cmp(&b.file_name()));
+    directories_after.sort_by_key(|a| a.file_name());
 
     assert_eq!(directories_after.len(), 4);
     assert!(!directories_after[0].path().is_symlink());
@@ -338,7 +337,7 @@ fn basic_unstow_file() {
         .filter(|e| { e.is_ok() })        // Remove errors
         .map(|e| { e.unwrap() })
         .collect::<Vec<_>>();
-    directories_after.sort_by(|a, b| a.file_name().cmp(&b.file_name()));
+    directories_after.sort_by_key(|a| a.file_name());
 
     assert_eq!(directories_after.len(), 3);
     assert!(!directories_after[0].path().is_symlink());
@@ -361,7 +360,7 @@ fn basic_unstow_file() {
         .filter(|e| { e.is_ok() })        // Remove errors
         .map(|e| { e.unwrap() })
         .collect::<Vec<_>>();
-    directories_after.sort_by(|a, b| a.file_name().cmp(&b.file_name()));
+    directories_after.sort_by_key(|a| a.file_name());
 
     assert_eq!(directories_after.len(), 2);
     assert!(!directories_after[0].path().is_symlink());
@@ -402,7 +401,7 @@ fn basic_unstow_folder() {
         .filter(|e| { e.is_ok() })        // Remove errors
         .map(|e| { e.unwrap() })
         .collect::<Vec<_>>();
-    directories_after.sort_by(|a, b| a.file_name().cmp(&b.file_name()));
+    directories_after.sort_by_key(|a| a.file_name());
 
     assert_eq!(directories_after.len(), 3);
     assert!(directories_after[0].path().is_symlink());
@@ -425,7 +424,7 @@ fn basic_unstow_folder() {
         .filter(|e| { e.is_ok() })        // Remove errors
         .map(|e| { e.unwrap() })
         .collect::<Vec<_>>();
-    directories_after.sort_by(|a, b| a.file_name().cmp(&b.file_name()));
+    directories_after.sort_by_key(|a| a.file_name());
 
     assert_eq!(directories_after.len(), 2);
     assert!(!directories_after[0].path().is_symlink());
@@ -466,7 +465,7 @@ fn basic_unstow_w_parent_directory_exits() {
         .filter(|e| { e.is_ok() })        // Remove errors
         .map(|e| { e.unwrap() })
         .collect::<Vec<_>>();
-    directories_after.sort_by(|a, b| a.file_name().cmp(&b.file_name()));
+    directories_after.sort_by_key(|a| a.file_name());
 
     assert_eq!(directories_after.len(), 2);
     assert!(!directories_after[0].path().is_symlink());
@@ -500,7 +499,7 @@ fn basic_unstow_w_parent_directory_exits() {
         .filter(|e| { e.is_ok() })        // Remove errors
         .map(|e| { e.unwrap() })
         .collect::<Vec<_>>();
-    directories_after.sort_by(|a, b| a.file_name().cmp(&b.file_name()));
+    directories_after.sort_by_key(|a| a.file_name());
 
     assert_eq!(directories_after.len(), 1);
     assert!(!directories_after[0].path().is_symlink());
@@ -531,7 +530,7 @@ fn full_unstow() {
             ftype.unwrap().is_dir()
         })
         .filter(|e| {                     // Remove files starts with dot
-            !e.file_name().to_string_lossy().starts_with(".")
+            !e.file_name().to_string_lossy().starts_with('.')
         })
         .collect::<Vec<_>>();
 
@@ -550,7 +549,7 @@ fn full_unstow() {
         .filter(|e| { e.is_ok() })        // Remove errors
         .map(|e| { e.unwrap() })
         .collect::<Vec<_>>();
-    directories_after.sort_by(|a, b| a.file_name().cmp(&b.file_name()));
+    directories_after.sort_by_key(|a| a.file_name());
 
     assert_eq!(directories_after.len(), 4);
     assert!(!directories_after[0].path().is_symlink());
@@ -583,7 +582,7 @@ fn full_unstow() {
             ftype.unwrap().is_dir()
         })
         .filter(|e| {                     // Remove files starts with dot
-            !e.file_name().to_string_lossy().starts_with(".")
+            !e.file_name().to_string_lossy().starts_with('.')
         })
         .collect::<Vec<_>>();
 
@@ -602,7 +601,7 @@ fn full_unstow() {
         .filter(|e| { e.is_ok() })        // Remove errors
         .map(|e| { e.unwrap() })
         .collect::<Vec<_>>();
-    directories_after.sort_by(|a, b| a.file_name().cmp(&b.file_name()));
+    directories_after.sort_by_key(|a| a.file_name());
 
     assert_eq!(directories_after.len(), 1);
     assert!(!directories_after[0].path().is_symlink());

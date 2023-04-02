@@ -6,7 +6,7 @@ use std::{
     path::Path,
 };
 
-use crate::options::{FileType, Options};
+use crate::options::Options;
 
 // TODO: When "io_error_more" becomes stable chaeck for commented errors as well
 
@@ -22,7 +22,12 @@ pub fn create_symlink(original: &Path, destination: &Path, options: &Options) ->
         );
     }
 
-    if options.simulate { return true; }
+    // if options.simulate {
+    //    options.simulate_change_histoory.push(FileType::Symlink(
+    //        destination.to_string_lossy().to_string(),
+    //    ));
+    //    return true;
+    //}
 
     if let Err(why) = unix::fs::symlink(original, destination) {
         match why.kind() {
@@ -128,7 +133,12 @@ pub fn create_dir(path: &Path, options: &Options) -> bool {
         );
     }
 
-    if options.simulate { return true; }
+    // if options.simulate {
+    //    options.simulate_change_histoory.push(FileType::Directory(
+    //        path.to_string_lossy().to_string(),
+    //    ));
+    //    return true;
+    //}
 
     if let Err(why) = fs::create_dir_all(path) {
         match why.kind() {
@@ -458,7 +468,7 @@ pub fn is_root_file(path: &Path) -> bool {
                         return false;
                     }
 
-                    for element in subdirs.unwrap().filter(|e| e.is_ok()).map(|e| e.unwrap()) {
+                    for element in subdirs.unwrap().filter_map(|e| e.ok()) {
                         if !is_root_file(&element.path()) {
                             return false;
                         }
