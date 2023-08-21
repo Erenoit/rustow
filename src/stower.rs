@@ -6,6 +6,8 @@ use std::{
     path::{Path, PathBuf},
 };
 
+use regex::Regex;
+
 use crate::cmd::Args;
 
 // TODO: make simulate keep trck of changes so it will generate more realistic
@@ -47,6 +49,7 @@ pub struct Stower {
     verbose:        bool,
     special_paths:  bool,
     security_check: bool,
+    replace_name:   Option<(String, String)>,
     stow:           Vec<PathBuf>,
     unstow:         Vec<PathBuf>,
     restow:         Vec<PathBuf>,
@@ -65,6 +68,14 @@ impl Stower {
             verbose:        options.verbose,
             special_paths:  !options.no_special_paths,
             security_check: !options.no_security_check,
+            replace_name:   if options.replace_name.is_empty() {
+                None
+            } else {
+                Some((
+                    options.replace_name[0].clone(),
+                    options.replace_name[1].clone(),
+                ))
+            },
             stow:           Self::ready_directories(full_stow_path.clone(), options.stow),
             unstow:         Self::ready_directories(full_stow_path.clone(), options.unstow),
             restow:         Self::ready_directories(full_stow_path.clone(), options.restow),
@@ -163,19 +174,10 @@ impl Stower {
     }
 
     fn stow(&self, original: &Path, destination: &Path, use_special_paths: bool) -> Result<()> {
-        let destination = if use_special_paths {
-            if let Some(path) = self.handle_special_paths(original, destination) {
-                path
-            } else {
-                print_verbose!(
-                    self,
-                    "Got error while handling special paths for {}. Skipping...",
-                    original.display()
-                );
-                return Ok(());
-            }
-        } else {
-            destination.to_path_buf()
+        let Some(destination) =
+            self.handle_destination(original, destination, use_special_paths)?
+        else {
+            return Ok(());
         };
 
         let Some(file_name) = original.file_name() else {
@@ -263,19 +265,10 @@ impl Stower {
     }
 
     fn unstow(&self, original: &Path, destination: &Path, use_special_paths: bool) -> Result<()> {
-        let destination = if use_special_paths {
-            if let Some(path) = self.handle_special_paths(original, destination) {
-                path
-            } else {
-                print_verbose!(
-                    self,
-                    "Got error while handling special paths for {}. Skipping...",
-                    original.display()
-                );
-                return Ok(());
-            }
-        } else {
-            destination.to_path_buf()
+        let Some(destination) =
+            self.handle_destination(original, destination, use_special_paths)?
+        else {
+            return Ok(());
         };
 
         let Some(file_name) = original.file_name() else {
@@ -323,19 +316,10 @@ impl Stower {
     }
 
     fn adopt(&self, original: &Path, destination: &Path, use_special_paths: bool) -> Result<()> {
-        let destination = if use_special_paths {
-            if let Some(path) = self.handle_special_paths(original, destination) {
-                path
-            } else {
-                print_verbose!(
-                    self,
-                    "Got error while handling special paths for {}. Skipping...",
-                    original.display()
-                );
-                return Ok(());
-            }
-        } else {
-            destination.to_path_buf()
+        let Some(destination) =
+            self.handle_destination(original, destination, use_special_paths)?
+        else {
+            return Ok(());
         };
 
         let Some(file_name) = original.file_name() else {
@@ -566,5 +550,49 @@ Use --no-security-check flag to prevent from this error
                 false
             },
         }
+    }
+
+    fn handle_destination(
+        &self,
+        original: &Path,
+        destination: &Path,
+        use_special_paths: bool,
+    ) -> Result<Option<PathBuf>> {
+        let mut destination = if use_special_paths {
+            if let Some(path) = self.handle_special_paths(original, destination) {
+                path
+            } else {
+                print_verbose!(
+                    self,
+                    "Got error while handling special paths for {}. Skipping...",
+                    original.display()
+                );
+                return Ok(None);
+            }
+        } else {
+            destination.to_path_buf()
+        };
+
+        if let Some((ref find, ref relpace)) = self.replace_name {
+            let Ok(re) = Regex::new(find) else {
+                print_verbose!(self, "Invalid regex: {}", find);
+                return Err(io::Error::new(
+                    io::ErrorKind::InvalidInput,
+                    "Invalid regex",
+                ));
+            };
+
+            let name = destination
+                .file_name()
+                .expect("Cannot fail")
+                .to_string_lossy()
+                .to_string();
+
+            let new_name = re.replace_all(&name, relpace.as_str());
+
+            destination.set_file_name(new_name.to_string());
+        }
+
+        Ok(Some(destination))
     }
 }
