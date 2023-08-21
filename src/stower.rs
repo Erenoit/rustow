@@ -8,9 +8,12 @@ use std::{
 
 use crate::cmd::Args;
 
+// TODO: make simulate keep trck of changes so it will generate more realistic
+// simulation
+
 macro_rules! print_verbose {
     ($self:ident, $($arg:tt)*) => {
-        if $self.verbose {
+        if $self.verbose || $self.simulate {
             println!($($arg)*);
         }
     };
@@ -403,6 +406,10 @@ impl Stower {
             original.to_string_lossy()
         );
 
+        if self.simulate {
+            return Ok(());
+        }
+
         unix::fs::symlink(original, destination)
     }
 
@@ -412,6 +419,10 @@ impl Stower {
             "Removing symlink: {}",
             target.to_string_lossy()
         );
+
+        if self.simulate {
+            return Ok(());
+        }
 
         fs::remove_file(target)
     }
@@ -423,6 +434,10 @@ impl Stower {
             target.to_string_lossy()
         );
 
+        if self.simulate {
+            return Ok(());
+        }
+
         fs::create_dir_all(target)
     }
 
@@ -432,6 +447,10 @@ impl Stower {
             "Removing directory: {}",
             target.to_string_lossy()
         );
+
+        if self.simulate {
+            return Ok(());
+        }
 
         fs::remove_dir_all(target)
     }
@@ -443,6 +462,10 @@ impl Stower {
             target.to_string_lossy()
         );
 
+        if self.simulate {
+            return Ok(());
+        }
+
         fs::remove_file(target)
     }
 
@@ -453,6 +476,10 @@ impl Stower {
             original.to_string_lossy(),
             destination.to_string_lossy()
         );
+
+        if self.simulate {
+            return Ok(());
+        }
 
         if fs::rename(original, destination).is_err() {
             fs::copy(original, destination)?;

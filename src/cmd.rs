@@ -3,6 +3,7 @@ use std::path::PathBuf;
 use clap::{arg, command, ArgAction, Parser, ValueHint};
 
 // TODO: add ability to add custom special keywords
+// TODO: include dotfiles
 // TODO: strict mode: fail if couldn't stow/unstow/adopt/restow any package
 
 #[derive(Parser)]
