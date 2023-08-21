@@ -27,22 +27,22 @@ a Stow directory, so it's always possible to rebuild the target tree.
 
 .SH OPERATIONS
 .TP
-.BR \-S " \fI\,PACKAGE(S)\/\fR"
+.BR \-S " \fI\,PACKAGE...\/\fR"
 Stow the package(s).
 .IP
 Creates symlinks of files in the package(s) to target directory.
 .TP
-.BR \-D " \fI\,PACKAGE(S)\/\fR"
+.BR \-D " \fI\,PACKAGE...\/\fR"
 Unstow the package(s).
 .IP
 Removes existing symlinks of files in the package in target directory.
 .TP
-.BR \-R " \fI\,PACKAGE(S)\/\fR"
+.BR \-R " \fI\,PACKAGE...\/\fR"
 Restow the package(s).
 .IP
 Same as unstowing and then stowing a package(s).
 .TP
-.BR \-A " \fI\,PACKAGE(S)\/\fR"
+.BR \-A " \fI\,PACKAGE...\/\fR"
 Adopt the package(s).
 .IP
 Imports existing files in target directory to stow package.
@@ -74,6 +74,11 @@ Disables special keywords while (un)stowing.
 .TP
 .BR \-\-no\-security\-check
 Disables security check for \fI\,@root\/\fR.
+.TP
+.BR \-r ", " \-\-replace\-name " \fI\,FIND\/\fR" " \fI\,REPLACE\/\fR"
+Replace \fI\,FIND\/\fR with \fI\,REPLACE\/\fR in all paths.
+\fI\,FIND\/\fR uses regex to match paths but \fI\,REPLACE\/\fR does not.
+There can be only one replace argument.
 
 .SH SPECIAL FOLDER NAMES
 This folder names change target directory only for files inside it. This only works if the directory
