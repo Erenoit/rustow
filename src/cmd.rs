@@ -2,6 +2,9 @@ use std::path::PathBuf;
 
 use clap::{arg, command, ArgAction, Parser, ValueHint};
 
+// TODO: add ability to add custom special keywords
+// TODO: strict mode: fail if couldn't stow/unstow/adopt/restow any package
+
 #[derive(Parser)]
 #[command(author, version)]
 pub struct Args {
@@ -33,9 +36,9 @@ pub struct Args {
     #[arg(short, long, default_value = "false")]
     pub simulate: bool,
 
-    /// Disable the special keywords feature.
+    /// Disable the special paths feature.
     #[arg(long, default_value = "false")]
-    pub no_special_keywords: bool,
+    pub no_special_paths: bool,
 
     /// Disable the security checks.
     #[arg(
