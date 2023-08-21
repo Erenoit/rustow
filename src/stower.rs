@@ -171,7 +171,15 @@ impl Stower {
             ));
         };
 
-        if destination.is_symlink() {
+        if original.is_symlink() {
+            print_verbose!(
+                self,
+                "{} is symlink. Skipping...",
+                file_name.to_string_lossy()
+            );
+
+            Ok(())
+        } else if destination.is_symlink() {
             if destination.is_dir() {
                 if let Ok(real_dest) = fs::canonicalize(&destination) {
                     if real_dest == original {
@@ -263,7 +271,15 @@ impl Stower {
             return Ok(());
         }
 
-        if destination.is_symlink() {
+        if original.is_symlink() {
+            print_verbose!(
+                self,
+                "{} is symlink. Skipping...",
+                file_name.to_string_lossy()
+            );
+
+            Ok(())
+        } else if destination.is_symlink() {
             self.remove_symlink(&destination)
         } else if destination.is_dir() && original.is_dir() {
             self.handle_directory(
