@@ -1,6 +1,7 @@
 use std::{
     fs,
     io::{self, Result},
+    os::unix,
     path::{Path, PathBuf},
 };
 
@@ -367,27 +368,70 @@ impl Stower {
     }
 
     fn create_symlink(&self, original: &Path, destination: &Path) -> Result<()> {
-        todo!("Create Symlink --------------------------------------------------------");
+        print_verbose!(
+            self,
+            "Creating symlink: {} -> {}",
+            destination.to_string_lossy(),
+            original.to_string_lossy()
+        );
+
+        unix::fs::symlink(original, destination)
     }
 
     fn remove_symlink(&self, target: &Path) -> Result<()> {
-        todo!("Remove Symlink --------------------------------------------------------");
+        print_verbose!(
+            self,
+            "Removing symlink: {}",
+            target.to_string_lossy()
+        );
+
+        fs::remove_file(target)
     }
 
     fn create_dir(&self, target: &Path) -> Result<()> {
-        todo!("Create Dir ------------------------------------------------------------");
+        print_verbose!(
+            self,
+            "Creating directory: {}",
+            target.to_string_lossy()
+        );
+
+        fs::create_dir_all(target)
     }
 
     fn remove_dir(&self, target: &Path) -> Result<()> {
-        todo!("Remove Dir ------------------------------------------------------------");
+        print_verbose!(
+            self,
+            "Removing directory: {}",
+            target.to_string_lossy()
+        );
+
+        fs::remove_dir_all(target)
     }
 
     fn remove_file(&self, target: &Path) -> Result<()> {
-        todo!("Remove File -----------------------------------------------------------");
+        print_verbose!(
+            self,
+            "Removing file: {}",
+            target.to_string_lossy()
+        );
+
+        fs::remove_file(target)
     }
 
     fn move_file(&self, original: &Path, destination: &Path) -> Result<()> {
-        todo!("Move File -------------------------------------------------------------");
+        print_verbose!(
+            self,
+            "Moving file: {} -> {}",
+            original.to_string_lossy(),
+            destination.to_string_lossy()
+        );
+
+        if fs::rename(original, destination).is_err() {
+            fs::copy(original, destination)?;
+            fs::remove_file(original)?;
+        }
+
+        Ok(())
     }
 
     fn handle_special_paths(&self, original: &Path, destination: &Path) -> PathBuf {
