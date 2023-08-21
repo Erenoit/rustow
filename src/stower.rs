@@ -37,16 +37,16 @@ macro_rules! prompt {
 }
 
 pub struct Stower {
-    stow_dir:          PathBuf,
-    target_dir:        PathBuf,
-    simulate:          bool,
-    verbose:           bool,
-    no_special_paths:  bool,
-    no_security_check: bool,
-    stow:              Vec<PathBuf>,
-    unstow:            Vec<PathBuf>,
-    restow:            Vec<PathBuf>,
-    adopt:             Vec<PathBuf>,
+    stow_dir:       PathBuf,
+    target_dir:     PathBuf,
+    simulate:       bool,
+    verbose:        bool,
+    special_paths:  bool,
+    security_check: bool,
+    stow:           Vec<PathBuf>,
+    unstow:         Vec<PathBuf>,
+    restow:         Vec<PathBuf>,
+    adopt:          Vec<PathBuf>,
 }
 
 impl Stower {
@@ -55,16 +55,16 @@ impl Stower {
         let full_target_path = fs::canonicalize(&options.target_dir)?;
 
         Ok(Self {
-            stow_dir:          full_stow_path.clone(),
-            target_dir:        full_target_path,
-            simulate:          options.simulate,
-            verbose:           options.verbose,
-            no_special_paths:  options.no_special_paths,
-            no_security_check: options.no_security_check,
-            stow:              Self::ready_directories(full_stow_path.clone(), options.stow),
-            unstow:            Self::ready_directories(full_stow_path.clone(), options.unstow),
-            restow:            Self::ready_directories(full_stow_path.clone(), options.restow),
-            adopt:             Self::ready_directories(full_stow_path, options.adopt),
+            stow_dir:       full_stow_path.clone(),
+            target_dir:     full_target_path,
+            simulate:       options.simulate,
+            verbose:        options.verbose,
+            special_paths:  !options.no_special_paths,
+            security_check: !options.no_security_check,
+            stow:           Self::ready_directories(full_stow_path.clone(), options.stow),
+            unstow:         Self::ready_directories(full_stow_path.clone(), options.unstow),
+            restow:         Self::ready_directories(full_stow_path.clone(), options.restow),
+            adopt:          Self::ready_directories(full_stow_path, options.adopt),
         })
     }
 
@@ -92,7 +92,7 @@ impl Stower {
                 package,
                 Self::unstow,
                 Some(Self::unstow_extra),
-                !self.no_special_paths,
+                self.special_paths,
             )
             .ok();
         });
@@ -102,22 +102,22 @@ impl Stower {
                 package,
                 Self::unstow,
                 Some(Self::unstow_extra),
-                !self.no_special_paths,
+                self.special_paths,
             )
             .ok();
-            self.handle_directory(package, Self::stow, None, !self.no_special_paths)
+            self.handle_directory(package, Self::stow, None, self.special_paths)
                 .ok();
         });
 
         self.stow.iter().for_each(|package| {
-            self.handle_directory(package, Self::stow, None, !self.no_special_paths)
+            self.handle_directory(package, Self::stow, None, self.special_paths)
                 .ok();
         });
 
         self.adopt.iter().for_each(|package| {
-            self.handle_directory(package, Self::adopt, None, !self.no_special_paths)
+            self.handle_directory(package, Self::adopt, None, self.special_paths)
                 .ok();
-            self.handle_directory(package, Self::stow, None, !self.no_special_paths)
+            self.handle_directory(package, Self::stow, None, self.special_paths)
                 .ok();
         });
     }
