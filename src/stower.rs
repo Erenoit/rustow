@@ -1,7 +1,8 @@
 use std::{
+    env,
     fs,
     io::{self, Result},
-    os::unix,
+    os::unix::{self, fs::MetadataExt},
     path::{Path, PathBuf},
 };
 
@@ -160,7 +161,16 @@ impl Stower {
 
     fn stow(&self, original: &Path, destination: &Path, use_special_paths: bool) -> Result<()> {
         let destination = if use_special_paths {
-            self.handle_special_paths(original, destination)
+            if let Some(path) = self.handle_special_paths(original, destination) {
+                path
+            } else {
+                print_verbose!(
+                    self,
+                    "Got error while handling special paths for {}. Skipping...",
+                    original.display()
+                );
+                return Ok(());
+            }
         } else {
             destination.to_path_buf()
         };
@@ -251,7 +261,16 @@ impl Stower {
 
     fn unstow(&self, original: &Path, destination: &Path, use_special_paths: bool) -> Result<()> {
         let destination = if use_special_paths {
-            self.handle_special_paths(original, destination)
+            if let Some(path) = self.handle_special_paths(original, destination) {
+                path
+            } else {
+                print_verbose!(
+                    self,
+                    "Got error while handling special paths for {}. Skipping...",
+                    original.display()
+                );
+                return Ok(());
+            }
         } else {
             destination.to_path_buf()
         };
@@ -302,7 +321,16 @@ impl Stower {
 
     fn adopt(&self, original: &Path, destination: &Path, use_special_paths: bool) -> Result<()> {
         let destination = if use_special_paths {
-            self.handle_special_paths(original, destination)
+            if let Some(path) = self.handle_special_paths(original, destination) {
+                path
+            } else {
+                print_verbose!(
+                    self,
+                    "Got error while handling special paths for {}. Skipping...",
+                    original.display()
+                );
+                return Ok(());
+            }
         } else {
             destination.to_path_buf()
         };
@@ -434,7 +462,82 @@ impl Stower {
         Ok(())
     }
 
-    fn handle_special_paths(&self, original: &Path, destination: &Path) -> PathBuf {
-        todo!("Handle Special Path ----------------------------------------------------");
+    fn handle_special_paths(&self, original: &Path, destination: &Path) -> Option<PathBuf> {
+        if !self.special_paths {
+            return Some(destination.to_path_buf());
+        }
+
+        let Some(file_name) = original.file_name() else {
+            return None;
+        };
+
+        match file_name.to_string_lossy().as_ref() {
+            "@home" => {
+                let Ok(home_path) = env::var("HOME") else {
+                    println!("Couldn't find HOME variable.");
+                    return None;
+                };
+
+                let home_path = PathBuf::from(home_path);
+
+                if home_path.exists() {
+                    Some(home_path)
+                } else {
+                    Some(destination.to_path_buf())
+                }
+            },
+            "@root" =>
+                if self.is_root_user_file(original) {
+                    Some(PathBuf::from("/"))
+                } else {
+                    println!(
+                        r#"
+For security reasons, all the files/folders including and followed by @root file must be owned by root.
+This requred to prevent giving others access to important system files by mistake.
+(Because the owner of the file will be the user who runs Rustow)
+Also creating a symlink to a path followed by @root generally needs root access anyway.
+If you want to stow something inside your home folder, use @home instead.
+Use --no-security-check flag to prevent from this error
+"#
+                    );
+
+                    None
+                },
+            _ => Some(destination.to_path_buf()),
+        }
+    }
+
+    fn is_root_user_file(&self, path: &Path) -> bool {
+        if !self.security_check {
+            return true;
+        }
+
+        // FIXME: we may not get the metadata because we do not have enough permmissions
+        match path.metadata() {
+            Ok(metadata) =>
+                if metadata.uid() == 0 {
+                    if path.is_dir() {
+                        let subdirs = fs::read_dir(path);
+                        if subdirs.is_err() {
+                            return false;
+                        }
+
+                        // FIXME: we may not read because we do not have enough permmissions
+                        subdirs
+                            .unwrap()
+                            .filter_map(|e| e.ok())
+                            .map(|element| self.is_root_user_file(&element.path()))
+                            .fold(true, |acc, x| acc && x)
+                    } else {
+                        true
+                    }
+                } else {
+                    false
+                },
+            Err(why) => {
+                dbg!("failed in metadata {}", why);
+                false
+            },
+        }
     }
 }
