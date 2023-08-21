@@ -6,6 +6,14 @@ use std::{
 
 use crate::cmd::Args;
 
+macro_rules! print_verbose {
+    ($self:ident, $($arg:tt)*) => {
+        if $self.verbose {
+            println!($($arg)*);
+        }
+    };
+}
+
 pub struct Stower {
     stow_dir:          PathBuf,
     target_dir:        PathBuf,
@@ -54,5 +62,165 @@ impl Stower {
             .map(|package| stow_dir.join(package))
             .filter(|package| package.is_dir())
             .collect()
+    }
+
+    pub fn run(self) {
+        self.unstow.iter().for_each(|package| {
+            self.handle_directory(
+                package,
+                Self::unstow,
+                Some(Self::unstow_extra),
+                !self.no_special_paths,
+            )
+            .ok();
+        });
+
+        self.restow.iter().for_each(|package| {
+            self.handle_directory(
+                package,
+                Self::unstow,
+                Some(Self::unstow_extra),
+                !self.no_special_paths,
+            )
+            .ok();
+            self.handle_directory(package, Self::stow, None, !self.no_special_paths)
+                .ok();
+        });
+
+        self.stow.iter().for_each(|package| {
+            self.handle_directory(package, Self::stow, None, !self.no_special_paths)
+                .ok();
+        });
+
+        self.adopt.iter().for_each(|package| {
+            self.handle_directory(package, Self::adopt, None, !self.no_special_paths)
+                .ok();
+            self.handle_directory(package, Self::stow, None, !self.no_special_paths)
+                .ok();
+        });
+    }
+
+    fn handle_directory(
+        &self,
+        directory: &Path,
+        action_func: fn(&Self, &Path, &Path, bool) -> Result<()>,
+        extra_func: Option<fn(&Self, &Path) -> Result<()>>,
+        use_special_paths: bool,
+    ) -> Result<()> {
+        let Some(_folder_name) = directory.file_name() else {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "Invalid directory name",
+            ));
+        };
+
+        let subdirs = fs::read_dir(directory)?;
+
+        let mut destination = self.target_dir.clone();
+        subdirs.filter_map(|e| e.ok()).for_each(|element| {
+            destination.push(element.file_name());
+            action_func(
+                self,
+                &element.path(),
+                &destination,
+                use_special_paths,
+            )
+            .ok();
+            destination.pop();
+        });
+
+        if let Some(extra) = extra_func {
+            extra(self, &destination).ok();
+        }
+
+        Ok(())
+    }
+
+    fn stow(&self, original: &Path, destination: &Path, use_special_paths: bool) -> Result<()> {
+        todo!("Stow -----------------------------------------------------------------");
+    }
+
+    fn unstow(&self, original: &Path, destination: &Path, use_special_paths: bool) -> Result<()> {
+        let destination = if use_special_paths {
+            self.handle_special_paths(original, destination)
+        } else {
+            destination.to_path_buf()
+        };
+
+        let Some(file_name) = original.file_name() else {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "Invalid file name",
+            ));
+        };
+
+        if !destination.exists() {
+            print_verbose!(
+                self,
+                "{} does not exist. Skipping...",
+                destination.display()
+            );
+            return Ok(());
+        }
+
+        if destination.is_symlink() {
+            self.remove_symlink(&destination)
+        } else if destination.is_dir() && original.is_dir() {
+            self.handle_directory(
+                original,
+                Self::unstow,
+                Some(Self::unstow_extra),
+                false, // specail paths only works in first level
+            )
+        } else {
+            print_verbose!(
+                self,
+                "{} exists but it is not a symlink. Skipping...",
+                file_name.to_string_lossy()
+            );
+
+            Ok(())
+        }
+    }
+
+    fn adopt(&self, original: &Path, destination: &Path, use_special_paths: bool) -> Result<()> {
+        todo!("Adopt ----------------------------------------------------------------");
+    }
+
+    fn unstow_extra(&self, target: &Path) -> Result<()> {
+        let mut dir_items = fs::read_dir(target)?;
+        if dir_items.next().is_none() {
+            self.remove_dir(target)?;
+        }
+
+        Ok(())
+    }
+
+    fn create_symlink(&self, original: &Path, destination: &Path) -> Result<()> {
+        todo!("Create Symlink --------------------------------------------------------");
+    }
+
+    fn remove_symlink(&self, original: &Path) -> Result<()> {
+        todo!("Remove Symlink --------------------------------------------------------");
+    }
+
+    fn create_dir(&self, original: &Path, destination: &Path) -> Result<()> {
+        todo!("Create Dir ------------------------------------------------------------");
+    }
+
+    fn remove_dir(&self, target: &Path) -> Result<()> {
+        todo!("Remove Dir ------------------------------------------------------------");
+    }
+
+    fn remove_file(&self, target: &Path) -> Result<()> {
+        todo!("Remove File -----------------------------------------------------------");
+    }
+
+    fn move_file(&self, original: &Path, destination: &Path) -> Result<()> {
+        todo!("Move File -------------------------------------------------------------");
+    }
+
+    fn handle_special_paths(&self, original: &Path, destination: &Path) -> PathBuf {
+        todo!("Handle Special Path ----------------------------------------------------");
     }
 }
