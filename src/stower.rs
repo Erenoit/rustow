@@ -14,6 +14,27 @@ macro_rules! print_verbose {
     };
 }
 
+macro_rules! prompt {
+    ($self:ident, $default:expr, $($arg:tt)*) => {
+        {
+            use std::io::{self, Write};
+
+            print!("{} {}: ", format!($($arg)*), if $default { "[Y/n]" } else { "[y/N]" });
+            io::stdout().flush().expect("Failed to print.");
+
+            let mut buffer = String::new();
+            if let Err(_e) = io::stdin().read_line(&mut buffer) {
+                println!("An error accured while taking input. Program will continue with \"No\" option.");
+                false
+            } else {
+                let answer = buffer.trim().to_lowercase();
+
+                ($default && answer.is_empty()) || answer == "y" || answer == "yes"
+            }
+        }
+    };
+}
+
 pub struct Stower {
     stow_dir:          PathBuf,
     target_dir:        PathBuf,
@@ -137,7 +158,86 @@ impl Stower {
     }
 
     fn stow(&self, original: &Path, destination: &Path, use_special_paths: bool) -> Result<()> {
-        todo!("Stow -----------------------------------------------------------------");
+        let destination = if use_special_paths {
+            self.handle_special_paths(original, destination)
+        } else {
+            destination.to_path_buf()
+        };
+
+        let Some(file_name) = original.file_name() else {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "Invalid file name",
+            ));
+        };
+
+        if destination.is_symlink() {
+            if destination.is_dir() {
+                if let Ok(real_dest) = fs::canonicalize(&destination) {
+                    if real_dest == original {
+                        print_verbose!(
+                            self,
+                            "{} is already stowed. Skipping...",
+                            file_name.to_string_lossy()
+                        );
+                        return Ok(());
+                    }
+
+                    self.remove_symlink(&destination)?;
+                    self.create_dir(&destination)?;
+
+                    self.handle_directory(&real_dest, Self::stow, None, false)?;
+                    self.handle_directory(original, Self::stow, None, false)
+                } else {
+                    let is_accepted = prompt!(
+                        self,
+                        false,
+                        "There is an invalid symlink on {}. Would you like to delete it and replace with new symlink",
+                        file_name.to_string_lossy()
+                        );
+
+                    if is_accepted {
+                        self.remove_symlink(&destination)?;
+                        self.create_symlink(original, &destination)
+                    } else {
+                        print_verbose!(
+                            self,
+                            "{} is already stowed. Skipping...",
+                            file_name.to_string_lossy()
+                        );
+                        Ok(())
+                    }
+                }
+            } else {
+                print_verbose!(
+                    self,
+                    "{} is already symlink. Skipping...",
+                    file_name.to_string_lossy()
+                );
+
+                Ok(())
+            }
+        } else if destination.exists() {
+            if destination.is_dir() {
+                self.handle_directory(original, Self::stow, None, false)
+            } else {
+                let is_accepted = prompt!(
+                    self,
+                    false,
+                    "{} already exists, would you like to delete it and replace with symlink",
+                    file_name.to_string_lossy()
+                );
+
+                if is_accepted {
+                    self.remove_file(&destination)?;
+                    self.create_symlink(original, &destination)?;
+                }
+
+                Ok(())
+            }
+        } else {
+            self.create_symlink(original, &destination)
+        }
     }
 
     fn unstow(&self, original: &Path, destination: &Path, use_special_paths: bool) -> Result<()> {
