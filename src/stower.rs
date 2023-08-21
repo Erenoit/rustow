@@ -184,7 +184,61 @@ impl Stower {
     }
 
     fn adopt(&self, original: &Path, destination: &Path, use_special_paths: bool) -> Result<()> {
-        todo!("Adopt ----------------------------------------------------------------");
+        let destination = if use_special_paths {
+            self.handle_special_paths(original, destination)
+        } else {
+            destination.to_path_buf()
+        };
+
+        let Some(file_name) = original.file_name() else {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "Invalid file name",
+            ));
+        };
+
+        if !destination.exists() {
+            print_verbose!(
+                self,
+                "{} does not exist. Skipping...",
+                destination.display()
+            );
+            return Ok(());
+        }
+
+        if destination.is_symlink() {
+            print_verbose!(
+                self,
+                "{} is already symlink. Skipping...",
+                destination.display()
+            );
+
+            Ok(())
+        } else if original.is_symlink() {
+            print_verbose!(
+                self,
+                "{} is symlink but destination is not. Skipping...",
+                file_name.to_string_lossy()
+            );
+
+            Ok(())
+        } else if destination.is_dir() && original.is_dir() {
+            self.handle_directory(original, Self::adopt, None, false)
+        } else if destination.is_file() && original.is_file() {
+            let mut backup_path = PathBuf::from("/tmp/rustow-backup");
+            self.create_dir(&backup_path)?;
+
+            backup_path.push(file_name);
+            self.move_file(original, &backup_path)?;
+            if self.move_file(&destination, original).is_ok() {
+                self.remove_file(&backup_path)
+            } else {
+                self.move_file(&backup_path, original)
+            }
+        } else {
+            print_verbose!(self, "Original and target are not same type (one is file but other is directory). Skipping...");
+            Ok(())
+        }
     }
 
     fn unstow_extra(&self, target: &Path) -> Result<()> {
@@ -200,11 +254,11 @@ impl Stower {
         todo!("Create Symlink --------------------------------------------------------");
     }
 
-    fn remove_symlink(&self, original: &Path) -> Result<()> {
+    fn remove_symlink(&self, target: &Path) -> Result<()> {
         todo!("Remove Symlink --------------------------------------------------------");
     }
 
-    fn create_dir(&self, original: &Path, destination: &Path) -> Result<()> {
+    fn create_dir(&self, target: &Path) -> Result<()> {
         todo!("Create Dir ------------------------------------------------------------");
     }
 
