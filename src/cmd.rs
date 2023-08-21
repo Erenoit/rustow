@@ -49,6 +49,17 @@ pub struct Args {
     )]
     pub no_security_check: bool,
 
+    /// replace <FIND> with <REPLACE> in all paths.
+    /// <FIND> uses regex to match paths but replace does not.
+    /// There can be only one replace argument.
+    #[arg(
+        short,
+        long,
+        value_names = &["FIND", "REPLACE"],
+        num_args = 2,
+     )]
+    pub replace_name: Vec<String>,
+
     /// Stow the package.
     /// Creates symlinks of files in the package to target directory
     #[arg(
