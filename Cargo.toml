@@ -1,6 +1,6 @@
 [package]
 name = "rustow"
-version = "0.5.0-beta"
+version = "1.0.0"
 edition = "2021"
 
 [dependencies]
