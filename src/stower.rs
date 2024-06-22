@@ -43,6 +43,7 @@ macro_rules! prompt {
 }
 
 pub struct Stower {
+    #[allow(dead_code)]
     stow_dir:       PathBuf,
     target_dir:     PathBuf,
     simulate:       bool,
@@ -105,6 +106,7 @@ impl Stower {
         self.unstow.iter().for_each(|package| {
             self.handle_directory(
                 package,
+                &self.target_dir,
                 Self::unstow,
                 Some(Self::unstow_extra),
                 self.special_paths,
@@ -115,31 +117,57 @@ impl Stower {
         self.restow.iter().for_each(|package| {
             self.handle_directory(
                 package,
+                &self.target_dir,
                 Self::unstow,
                 Some(Self::unstow_extra),
                 self.special_paths,
             )
             .ok();
-            self.handle_directory(package, Self::stow, None, self.special_paths)
-                .ok();
+            self.handle_directory(
+                package,
+                &self.target_dir,
+                Self::stow,
+                None,
+                self.special_paths,
+            )
+            .ok();
         });
 
         self.stow.iter().for_each(|package| {
-            self.handle_directory(package, Self::stow, None, self.special_paths)
-                .ok();
+            self.handle_directory(
+                package,
+                &self.target_dir,
+                Self::stow,
+                None,
+                self.special_paths,
+            )
+            .ok();
         });
 
         self.adopt.iter().for_each(|package| {
-            self.handle_directory(package, Self::adopt, None, self.special_paths)
-                .ok();
-            self.handle_directory(package, Self::stow, None, self.special_paths)
-                .ok();
+            self.handle_directory(
+                package,
+                &self.target_dir,
+                Self::adopt,
+                None,
+                self.special_paths,
+            )
+            .ok();
+            self.handle_directory(
+                package,
+                &self.target_dir,
+                Self::stow,
+                None,
+                self.special_paths,
+            )
+            .ok();
         });
     }
 
     fn handle_directory(
         &self,
         directory: &Path,
+        destination: &Path,
         action_func: fn(&Self, &Path, &Path, bool) -> Result<()>,
         extra_func: Option<fn(&Self, &Path) -> Result<()>>,
         use_special_paths: bool,
@@ -153,21 +181,21 @@ impl Stower {
 
         let subdirs = fs::read_dir(directory)?;
 
-        let mut destination = self.target_dir.clone();
+        let mut new_destination = destination.to_path_buf();
         subdirs.filter_map(|e| e.ok()).for_each(|element| {
-            destination.push(element.file_name());
+            new_destination.push(element.file_name());
             action_func(
                 self,
                 &element.path(),
-                &destination,
+                &new_destination,
                 use_special_paths,
             )
             .ok();
-            destination.pop();
+            new_destination.pop();
         });
 
         if let Some(extra) = extra_func {
-            extra(self, &destination).ok();
+            extra(self, destination).ok();
         }
 
         Ok(())
@@ -210,8 +238,8 @@ impl Stower {
                     self.remove_symlink(&destination)?;
                     self.create_dir(&destination)?;
 
-                    self.handle_directory(&real_dest, Self::stow, None, false)?;
-                    self.handle_directory(original, Self::stow, None, false)
+                    self.handle_directory(&real_dest, &destination, Self::stow, None, false)?;
+                    self.handle_directory(original, &destination, Self::stow, None, false)
                 } else {
                     let is_accepted = prompt!(
                         self,
@@ -243,7 +271,7 @@ impl Stower {
             }
         } else if destination.exists() {
             if destination.is_dir() {
-                self.handle_directory(original, Self::stow, None, false)
+                self.handle_directory(original, &destination, Self::stow, None, false)
             } else {
                 let is_accepted = prompt!(
                     self,
@@ -300,6 +328,7 @@ impl Stower {
         } else if destination.is_dir() && original.is_dir() {
             self.handle_directory(
                 original,
+                &destination,
                 Self::unstow,
                 Some(Self::unstow_extra),
                 false, // specail paths only works in first level
@@ -355,7 +384,7 @@ impl Stower {
 
             Ok(())
         } else if destination.is_dir() && original.is_dir() {
-            self.handle_directory(original, Self::adopt, None, false)
+            self.handle_directory(original, &destination, Self::adopt, None, false)
         } else if destination.is_file() && original.is_file() {
             let mut backup_path = PathBuf::from("/tmp/rustow-backup");
             self.create_dir(&backup_path)?;
@@ -538,7 +567,7 @@ Use --no-security-check flag to prevent from this error
                             .unwrap()
                             .filter_map(|e| e.ok())
                             .map(|element| self.is_root_user_file(&element.path()))
-                            .fold(true, |acc, x| acc && x)
+                            .all(|x| x)
                     } else {
                         true
                     }
