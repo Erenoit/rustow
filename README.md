@@ -1,9 +1,12 @@
-# Rustow
+<div align="center" style="size: 10px">
+
+<img src="images/RustowBanner.png" alt="Rustow Banner" width="90" />
+
+</div>
 
 Rustow is [GNU Stow] rewritten in [Rust]. While writing Rustow, [GNU Stow] only used as a starting
 idea not as an objective; so expect some different behavior and/or missing features. Rustow also has
-some additional features over [GNU Stow]. Check man page for more details. It may have some bugs.
-**USE WITH CAUTION!**
+some additional features over [GNU Stow]. Check man page for more details.
 
 ## Installation
 
